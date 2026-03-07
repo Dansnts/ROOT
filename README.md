@@ -31,7 +31,7 @@ ROOT is a single-user, offline-first workspace that lives entirely in your brows
 
 <table>
 <tr>
-<td width="50%" valign="top">
+
 
 <h3>
 <img src="public/icon-notes.svg" width="16" height="16" style="vertical-align:middle;margin-right:6px" alt=""/>
@@ -42,8 +42,11 @@ Rich block editor powered by TipTap. Paragraphs, headings, lists, code blocks, q
 
 Pages live in a tree. Folders group them. Drag-and-drop reorders anything. Double-click a folder to get a terminal-style tree view with `├──` navigation.
 
-</td>
-<td width="50%" valign="top">
+<img src="docs/images/page.png" alt=""/>
+
+
+</tr>
+<tr>
 
 <h3>
 <img src="public/icon-kanban.svg" width="16" height="16" style="vertical-align:middle;margin-right:6px" alt=""/>
@@ -52,10 +55,11 @@ Kanban
 
 Persistent task board with status columns. Cards carry priority, due date, and tags. Tasks are stored as encrypted blocks, indistinguishable from any other content in the database.
 
-</td>
+<img src="docs/images/kanban.png" alt=""/>
+
 </tr>
 <tr>
-<td width="50%" valign="top">
+
 
 <h3>
 <img src="public/icon-calendar.svg" width="16" height="16" style="vertical-align:middle;margin-right:6px" alt=""/>
@@ -64,10 +68,12 @@ Calendar + CalDAV
 
 FullCalendar view with two-way sync to any CalDAV server (Infomaniak, Fastmail, iCloud, Nextcloud…). Credentials are encrypted at rest. Sync runs through a local nginx reverse proxy that handles CORS — no data transits a third-party.
 
-Each calendar can be mapped to either the calendar view or the Kanban board.
+<img src="docs/images/CreateEvent.png" alt=""/>
 
-</td>
-<td width="50%" valign="top">
+
+Each calendar can be mapped to either the calendar view or the Kanban board.
+</tr>
+<tr>
 
 <h3>
 <img src="public/icon-lock.svg" width="16" height="16" style="vertical-align:middle;margin-right:6px" alt=""/>
@@ -78,7 +84,10 @@ Unlock with a Master Password. PBKDF2 (SHA-256, 600 000 iterations) derives the 
 
 Lock at any time. The key is erased from memory. The app returns to the password screen.
 
-</td>
+
+<img src="docs/images/themeCompariason.png" alt=""/>
+
+
 </tr>
 </table>
 
