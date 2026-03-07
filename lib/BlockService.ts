@@ -21,6 +21,7 @@ export interface DecryptedPage {
   updatedAt: number;
   isDeleted: boolean;
   isFolder?: boolean;
+  tagIds?: string[];
 }
 
 export interface DecryptedBlock {
@@ -43,7 +44,7 @@ async function decryptPage(r: PageRecord): Promise<DecryptedPage> {
     decryptValue<string>(r.encryptedTitle),
     r.encryptedIcon ? decryptValue<string>(r.encryptedIcon) : Promise.resolve(undefined),
   ]);
-  return { id: r.id, parentId: r.parentId, title, icon, order: r.order, createdAt: r.createdAt, updatedAt: r.updatedAt, isDeleted: r.isDeleted, isFolder: r.isFolder };
+  return { id: r.id, parentId: r.parentId, title, icon, order: r.order, createdAt: r.createdAt, updatedAt: r.updatedAt, isDeleted: r.isDeleted, isFolder: r.isFolder, tagIds: r.tagIds };
 }
 
 async function decryptBlock(r: BlockRecord): Promise<DecryptedBlock> {

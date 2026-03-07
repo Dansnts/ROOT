@@ -78,6 +78,8 @@ export interface PageRecord {
   isDeleted: boolean;
   /** Dossier : conteneur sans contenu éditeur, sert à regrouper des pages */
   isFolder?: boolean;
+  /** IDs des tags assignés (en clair — les UUIDs ne révèlent pas les noms) */
+  tagIds?: string[];
 }
 
 /**
@@ -109,6 +111,8 @@ export interface BlockRecord {
   createdAt: number;
   updatedAt: number;
   isDeleted: boolean;
+  /** IDs des tags (en clair, pour filtrage sans déchiffrement) */
+  tagIds?: string[];
 }
 
 /**
@@ -186,6 +190,18 @@ class OnyxDatabase extends Dexie {
 export const db = new OnyxDatabase();
 
 // ── Helpers typés ─────────────────────────────────────────────────────────────
+
+/**
+ * Définition d'un tag utilisateur.
+ * Stocké chiffré dans settings["app_tags"] sous forme de tableau JSON.
+ */
+export interface TagDefinition {
+  id: string;
+  name: string;
+  /** Couleur hex (#RRGGBB) */
+  color: string;
+  createdAt: number;
+}
 
 /**
  * Propriétés d'un bloc de type 'task' (stockées dans encryptedProperties).
