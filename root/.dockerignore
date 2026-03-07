@@ -1,0 +1,20 @@
+# Dépendances — réinstallées dans le builder
+node_modules
+
+# Artifacts de build précédents
+.next
+out
+
+# Fichiers de dev
+.env*
+*.local
+.DS_Store
+
+# Git
+.git
+.gitignore
+
+# Docker lui-même
+Dockerfile
+.dockerignore
+docker-compose.yml
