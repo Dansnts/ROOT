@@ -1,0 +1,184 @@
+@import "tailwindcss";
+
+/* ── ROOT Design Tokens — Dark mode (default) ─────────────────────────────── */
+:root,
+[data-theme="dark"] {
+  --bg:           #080f0b;
+  --surface:      #0e1812;
+  --surface-2:    #152019;
+  --surface-3:    #1c2a20;
+  --border:       rgba(74, 222, 128, 0.09);
+  --border-light: rgba(74, 222, 128, 0.18);
+
+  --text:         #d8ece1;
+  --text-muted:   rgba(216, 236, 225, 0.55);
+  --text-faint:   rgba(216, 236, 225, 0.28);
+
+  --accent:       #4ade80;
+  --accent-hover: #86efac;
+  --accent-rgb:   74 222 128;
+
+  --danger:       #f87171;
+  --success:      #4ade80;
+}
+
+/* ── ROOT Design Tokens — Light mode (warm cream / orange) ───────────────── */
+[data-theme="light"] {
+  --bg:           #faf5ee;
+  --surface:      #fff8f0;
+  --surface-2:    #f5ebe0;
+  --surface-3:    #ece0d0;
+  --border:       rgba(160, 90, 20, 0.12);
+  --border-light: rgba(160, 90, 20, 0.22);
+
+  --text:         #2e1c0a;
+  --text-muted:   rgba(46, 28, 10, 0.58);
+  --text-faint:   rgba(46, 28, 10, 0.35);
+
+  --accent:       #c05e00;
+  --accent-hover: #943f00;
+  --accent-rgb:   192 94 0;
+
+  --danger:       #b91c1c;
+  --success:      #15803d;
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground:  var(--text);
+  --font-sans: var(--font-pixelify);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* ── Reset ────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-pixelify), system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Pixel-art image rendering ────────────────────────────────────────────── */
+.pixel-art {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+
+/* ── Selection ────────────────────────────────────────────────────────────── */
+::selection { background: rgba(74, 222, 128, 0.2); }
+[data-theme="light"] ::selection { background: rgba(192, 94, 0, 0.18); }
+
+/* ── TipTap Editor ────────────────────────────────────────────────────────── */
+.tiptap {
+  outline: none; min-height: calc(100vh - 8rem); padding: 0 0 4rem;
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+.tiptap p.is-editor-empty:first-child::before,
+.tiptap .is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--text-faint);
+  pointer-events: none;
+  height: 0;
+}
+
+.tiptap h1 { font-size: 2rem;   font-weight: 700; line-height: 1.2; margin: 2rem 0 0.5rem; letter-spacing: -0.02em; }
+.tiptap h2 { font-size: 1.5rem; font-weight: 600; line-height: 1.3; margin: 1.5rem 0 0.4rem; }
+.tiptap h3 { font-size: 1.2rem; font-weight: 600; line-height: 1.4; margin: 1.25rem 0 0.4rem; }
+.tiptap p  { margin: 0.3rem 0; line-height: 1.75; }
+
+.tiptap ul { list-style: disc; padding-left: 1.5rem; margin: 0.4rem 0; }
+.tiptap ol { list-style: decimal; padding-left: 1.5rem; margin: 0.4rem 0; }
+.tiptap li { margin: 0.2rem 0; line-height: 1.7; }
+.tiptap li > p { margin: 0; }
+
+.tiptap ul[data-type="taskList"] { list-style: none; padding-left: 0.25rem; }
+.tiptap ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 0.5rem; }
+.tiptap ul[data-type="taskList"] li > label { flex-shrink: 0; margin-top: 0.35rem; }
+.tiptap ul[data-type="taskList"] input[type="checkbox"] {
+  accent-color: var(--accent); width: 1rem; height: 1rem; cursor: pointer;
+}
+
+.tiptap blockquote {
+  border-left: 3px solid var(--border-light);
+  margin: 0.75rem 0; padding: 0.5rem 1rem;
+  color: var(--text-muted); font-style: italic;
+}
+
+.tiptap code {
+  font-family: var(--font-mono), monospace; font-size: 0.85em;
+  background: var(--surface-3); border: 1px solid var(--border);
+  padding: 0.1rem 0.4rem; border-radius: 4px; color: var(--accent-hover);
+}
+
+.tiptap pre {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 1.25rem; margin: 0.75rem 0; overflow-x: auto;
+}
+.tiptap pre code { background: none; border: none; padding: 0; font-size: 0.875rem; color: var(--text); }
+
+.tiptap hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+/* ── Slash Command Menu ───────────────────────────────────────────────────── */
+.slash-menu {
+  background: var(--surface-2); border: 1px solid var(--border-light);
+  border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.55);
+  padding: 0.375rem; min-width: 230px; max-height: 320px;
+  overflow-y: auto; z-index: 100;
+}
+.slash-menu-item {
+  display: flex; align-items: center; gap: 0.625rem;
+  padding: 0.45rem 0.625rem; border-radius: 6px; cursor: pointer;
+  transition: background 0.1s; font-size: 0.875rem; color: var(--text);
+}
+.slash-menu-item:hover, .slash-menu-item.is-selected { background: var(--surface-3); }
+.slash-menu-item-icon {
+  width: 1.75rem; height: 1.75rem; display: flex; align-items: center;
+  justify-content: center; background: var(--surface-3);
+  border-radius: 5px; font-size: 0.9rem; flex-shrink: 0;
+}
+
+/* ── FullCalendar ROOT Theme ──────────────────────────────────────────────── */
+.root-calendar {
+  --fc-border-color:              var(--border);
+  --fc-page-bg-color:             transparent;
+  --fc-neutral-bg-color:          var(--surface);
+  --fc-list-event-hover-bg-color: var(--surface-2);
+  --fc-today-bg-color:            rgba(var(--accent-rgb, 74 222 128) / 0.07);
+  --fc-event-bg-color:            var(--accent);
+  --fc-event-border-color:        var(--accent);
+  --fc-event-text-color:          var(--bg);
+  --fc-button-bg-color:           var(--surface-2);
+  --fc-button-border-color:       var(--border);
+  --fc-button-hover-bg-color:     var(--surface-3);
+  --fc-button-hover-border-color: var(--border-light);
+  --fc-button-active-bg-color:    var(--surface-3);
+  --fc-button-active-border-color: var(--accent);
+  --fc-button-text-color:         var(--text-muted);
+  font-size: 0.875rem;
+}
+.root-calendar .fc-toolbar-title { font-size: 1rem; font-weight: 600; color: var(--text); }
+.root-calendar .fc-col-header-cell-cushion { color: var(--text-muted); font-weight: 500; }
+.root-calendar .fc-daygrid-day-number { color: var(--text-muted); font-size: 0.8rem; }
+.root-calendar .fc-daygrid-day.fc-day-today .fc-daygrid-day-number { color: var(--accent); font-weight: 700; }
+.root-calendar .fc-event { border-radius: 3px; font-size: 0.8rem; cursor: pointer; }
+.root-calendar .fc-event:hover { filter: brightness(1.15); }
+.root-calendar .fc-button { text-transform: capitalize; font-size: 0.8rem !important; padding: 0.3rem 0.7rem !important; border-radius: 6px !important; }
+.root-calendar .fc-button-primary:not(:disabled):active,
+.root-calendar .fc-button-primary:not(:disabled).fc-button-active { box-shadow: none !important; }
+.root-calendar .fc-list-event-title { color: var(--text); }
+.root-calendar .fc-list-day-cushion { background: var(--surface) !important; }
+.root-calendar .fc-list-day-text,
+.root-calendar .fc-list-day-side-text { color: var(--text-muted); }
