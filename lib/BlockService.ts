@@ -162,7 +162,7 @@ export async function savePageDocument(
     .toArray();
   existing.sort((a, b) => a.order - b.order);
 
-  await db.transaction("rw", db.blocks, async () => {
+  await db.transaction("rw", db.pages, db.blocks, async () => {
     // Supprimer les blocs en surplus (si le doc a raccourci)
     if (existing.length > nodes.length) {
       const toDelete = existing.slice(nodes.length).map((b) => b.id);
