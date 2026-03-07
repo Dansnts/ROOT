@@ -1,13 +1,7 @@
 <br/>
 
 <p align="center">
-  <svg width="100" height="100" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="24" height="24" rx="5" fill="#0d1f14"/>
-    <path d="M12 3L12 21" stroke="#22d472" stroke-width="2" stroke-linecap="round"/>
-    <path d="M12 8Q8 6 6 9" stroke="#22d472" stroke-width="1.8" stroke-linecap="round" fill="none"/>
-    <path d="M12 12Q17 10 19 13" stroke="#22d472" stroke-width="1.8" stroke-linecap="round" fill="none"/>
-    <path d="M12 16Q8 14 7 17" stroke="#22d472" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-  </svg>
+  <img src="public/logo.svg" width="100" alt="ROOT logo"/>
 </p>
 
 <h1 align="center">ROOT</h1>
@@ -40,7 +34,7 @@ ROOT is a single-user, offline-first workspace that lives entirely in your brows
 <td width="50%" valign="top">
 
 <h3>
-<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22d472" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+<img src="public/icon-notes.svg" width="16" height="16" style="vertical-align:middle;margin-right:6px" alt=""/>
 Notes
 </h3>
 
@@ -52,7 +46,7 @@ Pages live in a tree. Folders group them. Drag-and-drop reorders anything. Doubl
 <td width="50%" valign="top">
 
 <h3>
-<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22d472" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><rect x="3" y="3" width="5" height="12" rx="1.5"/><rect x="9.5" y="3" width="5" height="7" rx="1.5"/><rect x="16" y="3" width="5" height="16" rx="1.5"/></svg>
+<img src="public/icon-kanban.svg" width="16" height="16" style="vertical-align:middle;margin-right:6px" alt=""/>
 Kanban
 </h3>
 
@@ -64,7 +58,7 @@ Persistent task board with status columns. Cards carry priority, due date, and t
 <td width="50%" valign="top">
 
 <h3>
-<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22d472" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="8" cy="15" r="1" fill="#22d472" stroke="none"/><circle cx="12" cy="15" r="1" fill="#22d472" stroke="none"/><circle cx="16" cy="15" r="1" fill="#22d472" stroke="none"/></svg>
+<img src="public/icon-calendar.svg" width="16" height="16" style="vertical-align:middle;margin-right:6px" alt=""/>
 Calendar + CalDAV
 </h3>
 
@@ -76,7 +70,7 @@ Each calendar can be mapped to either the calendar view or the Kanban board.
 <td width="50%" valign="top">
 
 <h3>
-<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22d472" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+<img src="public/icon-lock.svg" width="16" height="16" style="vertical-align:middle;margin-right:6px" alt=""/>
 Zero-Knowledge vault
 </h3>
 
