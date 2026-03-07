@@ -22,6 +22,7 @@
   <img alt="AES-GCM 256" src="https://img.shields.io/badge/AES--GCM-256--bit-22d472?style=flat-square"/>
   <img alt="PBKDF2" src="https://img.shields.io/badge/PBKDF2-600k_iter-22d472?style=flat-square"/>
   <img alt="Docker" src="https://img.shields.io/badge/Docker-ready-2496ed?style=flat-square&logo=docker"/>
+  <img alt="License" src="https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey?style=flat-square"/>
 </p>
 
 ---
@@ -174,6 +175,15 @@ nginx (container)
 All reads and writes go through `VaultService` (encrypt/decrypt) before touching IndexedDB. There is no code path that stores plaintext.
 
 ---
+
+---
+
+## License
+
+Copyright &copy; 2025 **Dansnts**
+
+This project is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+Free to use, share, and adapt — with attribution, non-commercially, under the same license.
 
 <p align="center">
   <sub>Zero-Knowledge · AES-GCM 256 · PBKDF2 600k · local-first</sub>
