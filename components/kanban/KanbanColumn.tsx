@@ -5,7 +5,6 @@ import { useDroppable } from "@dnd-kit/core";
 import type { KanbanTask } from "@/lib/KanbanService";
 import type { TaskStatus } from "@/lib/database";
 import { useKanbanStore } from "@/stores/kanbanStore";
-import { usePagesStore } from "@/stores/pagesStore";
 import TaskCard from "./TaskCard";
 
 interface Props {
@@ -18,24 +17,13 @@ interface Props {
 export default function KanbanColumn({ id, label, accent, tasks }: Props) {
   const { isOver, setNodeRef } = useDroppable({ id });
   const { addTask } = useKanbanStore();
-  const { pages, activePageId } = usePagesStore();
-
   const [isAdding, setIsAdding] = useState(false);
   const [draft, setDraft] = useState("");
-
-  // Page cible pour créer une tâche : page active ou première page disponible
-  function getTargetPageId(): string | null {
-    if (activePageId) return activePageId;
-    const first = pages.find((p) => !p.isDeleted);
-    return first?.id ?? null;
-  }
 
   async function commitAdd() {
     const title = draft.trim();
     if (!title) { setIsAdding(false); setDraft(""); return; }
-    const pageId = getTargetPageId();
-    if (!pageId) { alert("Créez d'abord une page dans Notes."); return; }
-    await addTask(title, id, pageId);
+    await addTask(title, id);
     setDraft("");
     setIsAdding(false);
   }

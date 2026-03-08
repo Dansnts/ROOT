@@ -170,18 +170,6 @@ export default function TaskDetailModal({ task, onClose }: Props) {
           </div>
         )}
 
-        {/* Page source */}
-        {task.pageTitle && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--text-faint)]">Page :</span>
-            <button
-              onClick={() => { setActivePage(task.pageId); onClose(); }}
-              className="text-xs text-[var(--accent-hover)] hover:underline"
-            >
-              {task.pageTitle} →
-            </button>
-          </div>
-        )}
 
         {/* Actions */}
         <div className="flex gap-2 pt-1">

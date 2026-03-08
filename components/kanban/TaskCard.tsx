@@ -26,6 +26,13 @@ export default function TaskCard({ task }: { task: KanbanTask }) {
   const { tags } = useTagsStore();
   const taskTagDefs = tags.filter((t) => (task.tags ?? []).includes(t.id));
   const [showDetail, setShowDetail] = useState(false);
+
+  // Couleur d'accent : tag unique → couleur du tag ; plusieurs → neutre ; aucun → transparente
+  const accentColor = taskTagDefs.length === 1
+    ? taskTagDefs[0].color
+    : taskTagDefs.length > 1
+      ? "#6b7280"
+      : undefined;
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.blockId,
   });
@@ -55,7 +62,11 @@ export default function TaskCard({ task }: { task: KanbanTask }) {
     {showDetail && <TaskDetailModal task={task} onClose={() => setShowDetail(false)} />}
     <div
       ref={setNodeRef}
-      style={style}
+      style={{
+        ...style,
+        borderLeftColor: accentColor ?? undefined,
+        borderLeftWidth: accentColor ? 3 : undefined,
+      }}
       className="group bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-3 cursor-grab active:cursor-grabbing hover:border-[var(--border-light)] transition-colors"
       {...attributes}
       {...listeners}
@@ -107,13 +118,6 @@ export default function TaskCard({ task }: { task: KanbanTask }) {
           >
             {isPastDue ? "⚠ " : ""}
             {dueDateLabel}
-          </span>
-        )}
-
-        {/* Page source */}
-        {task.pageTitle && (
-          <span className="ml-auto text-xs text-[var(--text-faint)] truncate max-w-[80px]">
-            {task.pageTitle}
           </span>
         )}
 

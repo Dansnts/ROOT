@@ -12,6 +12,8 @@ import {
 } from "@/lib/CalDAVService";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useCategoriesStore } from "@/stores/categoriesStore";
+import { useTagsStore } from "@/stores/tagsStore";
+import { KANBAN_PAGE_ID } from "@/lib/KanbanService";
 import type { CalendarEntry } from "@/lib/database";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -86,6 +88,9 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
     }
     const catById = new Map(categories.map((c) => [c.id, c]));
 
+    const { tags } = useTagsStore.getState();
+    const tagById = new Map(tags.map((t) => [t.id, t]));
+
     const allBlocks = await db.blocks.filter((b) => !b.isDeleted).toArray();
     const events: StoreEvent[] = [];
 
@@ -99,9 +104,32 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
         const title = extractText(content) || "Sans titre";
 
         const cat = catById.get(block.pageId);
-        const color = cat?.color ?? fallbackColor(props.status);
-        const categoryId = cat ? block.pageId : UNCATEGORIZED_ID;
-        const categoryName = cat?.name ?? "Sans catégorie";
+        let color: string;
+        let categoryId: string;
+        let categoryName: string;
+
+        if (cat) {
+          // Événement CalDAV avec catégorie
+          color = cat.color;
+          categoryId = block.pageId;
+          categoryName = cat.name;
+        } else if (block.pageId === KANBAN_PAGE_ID) {
+          // Tâche Kanban : couleur basée sur les tags
+          const taskTagIds: string[] = (props as unknown as { tags?: string[] }).tags ?? [];
+          const taskTags = taskTagIds.map((id) => tagById.get(id)).filter(Boolean);
+          color = taskTags.length === 1
+            ? taskTags[0]!.color
+            : taskTags.length > 1
+              ? "#6b7280"
+              : fallbackColor(props.status);
+          categoryId = KANBAN_PAGE_ID;
+          categoryName = "Kanban";
+        } else {
+          // Événement sans catégorie connue
+          color = fallbackColor(props.status);
+          categoryId = UNCATEGORIZED_ID;
+          categoryName = "Sans catégorie";
+        }
 
         events.push({
           id: block.id,

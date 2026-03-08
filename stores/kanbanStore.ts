@@ -16,7 +16,7 @@ interface KanbanState {
   isLoading: boolean;
 
   loadTasks: () => Promise<void>;
-  addTask: (title: string, status: TaskStatus, pageId: string) => Promise<void>;
+  addTask: (title: string, status: TaskStatus) => Promise<void>;
   moveTask: (blockId: string, newStatus: TaskStatus) => Promise<void>;
   setPriority: (blockId: string, priority: TaskPriority) => Promise<void>;
   removeTask: (blockId: string) => Promise<void>;
@@ -32,8 +32,8 @@ export const useKanbanStore = create<KanbanState>()((set, get) => ({
     set({ tasks, isLoading: false });
   },
 
-  addTask: async (title, status, pageId) => {
-    const task = await createTask(title, status, pageId);
+  addTask: async (title, status) => {
+    const task = await createTask(title, status);
     set((s) => ({ tasks: [...s.tasks, task] }));
   },
 

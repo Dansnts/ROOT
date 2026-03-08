@@ -222,7 +222,6 @@ export default function TagsView() {
                       </span>
                       {isPast(task.dueDate!) && <span className="text-xs text-red-400">⚠</span>}
                       <span className="text-sm text-[var(--text)] truncate flex-1">{task.title}</span>
-                      <span className="text-xs text-[var(--text-faint)] shrink-0">{task.pageTitle}</span>
                     </div>
                   ))}
                 </div>

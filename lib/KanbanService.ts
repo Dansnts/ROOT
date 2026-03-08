@@ -7,7 +7,10 @@
 
 import { db, type BlockRecord, type TaskStatus, type TaskPriority } from "./database";
 import { encryptValue, decryptValue } from "@/stores/vaultStore";
-import { loadAllPages } from "./BlockService";
+
+// ID virtuel utilisé comme pageId pour toutes les tâches Kanban —
+// jamais une vraie page, découplé de l'arbre de notes.
+export const KANBAN_PAGE_ID = "__kanban__";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -21,7 +24,6 @@ export interface TaskProperties {
 export interface KanbanTask {
   blockId: string;
   pageId: string;
-  pageTitle: string;
   title: string;
   status: TaskStatus;
   priority: TaskPriority;
@@ -50,9 +52,6 @@ export async function loadAllTasks(): Promise<KanbanTask[]> {
     .filter((b: BlockRecord) => !b.isDeleted)
     .toArray();
 
-  const pages = await loadAllPages();
-  const pageMap = new Map(pages.map((p) => [p.id, p.title]));
-
   const tasks = await Promise.all(
     blocks.map(async (block: BlockRecord) => {
       const [content, props] = await Promise.all([
@@ -63,7 +62,6 @@ export async function loadAllTasks(): Promise<KanbanTask[]> {
       return {
         blockId: block.id,
         pageId: block.pageId,
-        pageTitle: pageMap.get(block.pageId) ?? "—",
         title: extractText(content) || "Sans titre",
         status: props.status ?? "todo",
         priority: props.priority ?? "none",
@@ -121,9 +119,9 @@ export async function updateTaskDueDate(
 
 export async function createTask(
   title: string,
-  status: TaskStatus,
-  pageId: string
+  status: TaskStatus
 ): Promise<KanbanTask> {
+  const pageId = KANBAN_PAGE_ID;
   const now = Date.now();
   const id = crypto.randomUUID();
 
@@ -155,7 +153,6 @@ export async function createTask(
   return {
     blockId: id,
     pageId,
-    pageTitle: "",
     title,
     status,
     priority: "none",
