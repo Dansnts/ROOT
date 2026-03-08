@@ -25,11 +25,35 @@ interface Props {
 }
 
 const SAVE_DEBOUNCE_MS = 600;
+const TABLE_GRID = 6;
+
+// ── Image helpers (defined outside component to avoid stale closures) ─────────
+
+function insertImageFromFile(file: File, ed: Editor): boolean {
+  if (!file.type.startsWith("image/")) return false;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const src = ev.target?.result as string;
+    if (src) ed.chain().focus().setImage({ src }).run();
+  };
+  reader.readAsDataURL(file);
+  return true;
+}
+
+// ── BlockEditor ───────────────────────────────────────────────────────────────
 
 export default function BlockEditor({ pageId }: Props) {
   const { isUnlocked } = useVaultStore();
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentPageId = useRef(pageId);
+
+  // TablePicker state
+  const [tablePicker, setTablePicker] = useState<{
+    open: boolean;
+    x: number;
+    y: number;
+    editor: Editor | null;
+  }>({ open: false, x: 0, y: 0, editor: null });
 
   const editor = useEditor({
     extensions: [
@@ -49,6 +73,23 @@ export default function BlockEditor({ pageId }: Props) {
     ],
     editorProps: {
       attributes: { class: "tiptap" },
+      handlePaste(view, event) {
+        const items = Array.from(event.clipboardData?.items ?? []);
+        const imageItem = items.find((i) => i.type.startsWith("image/"));
+        if (!imageItem) return false;
+        const file = imageItem.getAsFile();
+        if (!file) return false;
+        const ed = (view as unknown as { editor: Editor }).editor;
+        return insertImageFromFile(file, ed);
+      },
+      handleDrop(view, event) {
+        const files = Array.from(event.dataTransfer?.files ?? []);
+        const imageFile = files.find((f) => f.type.startsWith("image/"));
+        if (!imageFile) return false;
+        event.preventDefault();
+        const ed = (view as unknown as { editor: Editor }).editor;
+        return insertImageFromFile(imageFile, ed);
+      },
     },
     onUpdate: ({ editor }) => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -58,6 +99,20 @@ export default function BlockEditor({ pageId }: Props) {
     },
     immediatelyRender: false,
   });
+
+  // Listen for CustomEvent from SlashCommandExtension to open TablePicker
+  useEffect(() => {
+    function onOpenTablePicker(e: Event) {
+      const { editor: ed } = (e as CustomEvent).detail as { editor: Editor };
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const rect = sel.getRangeAt(0).getBoundingClientRect();
+        setTablePicker({ open: true, x: rect.left, y: rect.bottom + window.scrollY + 4, editor: ed });
+      }
+    }
+    document.addEventListener("tiptap-open-table-picker", onOpenTablePicker);
+    return () => document.removeEventListener("tiptap-open-table-picker", onOpenTablePicker);
+  }, []);
 
   useEffect(() => {
     if (!editor || !isUnlocked) return;
@@ -88,6 +143,59 @@ export default function BlockEditor({ pageId }: Props) {
     >
       {editor && <BubbleToolbar editor={editor} />}
       <EditorContent editor={editor} />
+
+      {tablePicker.open && tablePicker.editor && createPortal(
+        <TablePicker
+          x={tablePicker.x}
+          y={tablePicker.y}
+          editor={tablePicker.editor}
+          onClose={() => setTablePicker((s) => ({ ...s, open: false }))}
+        />,
+        document.body,
+      )}
+    </div>
+  );
+}
+
+// ── TablePicker — 6×6 hover grid ──────────────────────────────────────────────
+
+function TablePicker({ x, y, editor, onClose }: {
+  x: number; y: number; editor: Editor; onClose: () => void;
+}) {
+  const [hover, setHover] = useState({ rows: 1, cols: 1 });
+
+  function handleSelect(rows: number, cols: number) {
+    editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run();
+    onClose();
+  }
+
+  return (
+    <div
+      className="fixed z-[300] bg-[var(--surface-2)] border border-[var(--border-light)] rounded-xl shadow-2xl p-3 flex flex-col gap-2"
+      style={{ top: y, left: x }}
+      onMouseLeave={() => setHover({ rows: 1, cols: 1 })}
+    >
+      <div className="flex flex-col gap-0.5">
+        {Array.from({ length: TABLE_GRID }, (_, r) => (
+          <div key={r} className="flex gap-0.5">
+            {Array.from({ length: TABLE_GRID }, (_, c) => (
+              <div
+                key={c}
+                className={`w-5 h-5 rounded-sm border cursor-pointer transition-colors ${
+                  r < hover.rows && c < hover.cols
+                    ? "bg-[var(--accent)] border-[var(--accent)]"
+                    : "bg-[var(--surface-3)] border-[var(--border)]"
+                }`}
+                onMouseEnter={() => setHover({ rows: r + 1, cols: c + 1 })}
+                onClick={() => handleSelect(hover.rows, hover.cols)}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-center text-[var(--text-faint)]">
+        {hover.rows} × {hover.cols}
+      </p>
     </div>
   );
 }

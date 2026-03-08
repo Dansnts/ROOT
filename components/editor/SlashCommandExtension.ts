@@ -76,8 +76,10 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
   {
     title: "Tableau",
     icon: "⊞",
-    description: "Tableau 3×3",
-    command: (e) => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+    description: "Tableau taille personnalisée",
+    command: (e) => {
+      document.dispatchEvent(new CustomEvent("tiptap-open-table-picker", { detail: { editor: e } }));
+    },
   },
   {
     title: "Image",
