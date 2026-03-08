@@ -290,7 +290,7 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
       {/* Footer — version */}
       <div className="px-4 py-2 border-t border-[var(--border)] flex items-center justify-between">
         <p className="text-[10px] text-[var(--text-faint)] font-mono">
-          ROOT <span className="opacity-40">·</span> v0.9
+          ROOT <span className="opacity-40">·</span> v1.0
         </p>
         <p className="text-[10px] text-[var(--text-faint)] opacity-40 font-mono">
           zero-knowledge
