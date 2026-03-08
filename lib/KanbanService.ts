@@ -5,7 +5,7 @@
  * et expose les opérations Kanban (move, create, delete).
  */
 
-import { db, type TaskStatus, type TaskPriority } from "./database";
+import { db, type BlockRecord, type TaskStatus, type TaskPriority } from "./database";
 import { encryptValue, decryptValue } from "@/stores/vaultStore";
 import { loadAllPages } from "./BlockService";
 
@@ -47,14 +47,14 @@ export async function loadAllTasks(): Promise<KanbanTask[]> {
   const blocks = await db.blocks
     .where("type")
     .equals("task")
-    .filter((b) => !b.isDeleted)
+    .filter((b: BlockRecord) => !b.isDeleted)
     .toArray();
 
   const pages = await loadAllPages();
   const pageMap = new Map(pages.map((p) => [p.id, p.title]));
 
   const tasks = await Promise.all(
-    blocks.map(async (block) => {
+    blocks.map(async (block: BlockRecord) => {
       const [content, props] = await Promise.all([
         decryptValue<Record<string, unknown>>(block.encryptedContent),
         decryptValue<TaskProperties>(block.encryptedProperties),
@@ -75,7 +75,7 @@ export async function loadAllTasks(): Promise<KanbanTask[]> {
     })
   );
 
-  return tasks.sort((a, b) => a.createdAt - b.createdAt);
+  return tasks.sort((a: { createdAt: number }, b: { createdAt: number }) => a.createdAt - b.createdAt);
 }
 
 // ── Écriture ──────────────────────────────────────────────────────────────────
@@ -136,7 +136,7 @@ export async function createTask(
   const count = await db.blocks
     .where("pageId")
     .equals(pageId)
-    .filter((b) => !b.isDeleted)
+    .filter((b: BlockRecord) => !b.isDeleted)
     .count();
 
   await db.blocks.add({

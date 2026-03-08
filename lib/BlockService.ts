@@ -6,6 +6,7 @@
  * Chaque lecture  → IndexedDB → déchiffrement AES-GCM → objet typé en RAM.
  */
 
+import Dexie from "dexie";
 import { db, type PageRecord, type BlockRecord, type BlockType } from "./database";
 import { encryptValue, decryptValue } from "@/stores/vaultStore";
 
@@ -58,7 +59,7 @@ async function decryptBlock(r: BlockRecord): Promise<DecryptedBlock> {
 // ── Pages ─────────────────────────────────────────────────────────────────────
 
 export async function loadAllPages(): Promise<DecryptedPage[]> {
-  const records = await db.pages.filter((p) => !p.isDeleted).toArray();
+  const records = await db.pages.filter((p: PageRecord) => !p.isDeleted).toArray();
   return Promise.all(records.map(decryptPage));
 }
 
@@ -68,8 +69,8 @@ export async function createPage(
   isFolder = false,
 ): Promise<DecryptedPage> {
   const now = Date.now();
-  const siblings = await db.pages.filter((p) => p.parentId === parentId && !p.isDeleted).toArray();
-  const order = siblings.length > 0 ? Math.max(...siblings.map((s) => s.order)) + 1 : 0;
+  const siblings = await db.pages.filter((p: PageRecord) => p.parentId === parentId && !p.isDeleted).toArray();
+  const order = siblings.length > 0 ? Math.max(...siblings.map((s: PageRecord) => s.order)) + 1 : 0;
 
   const record: PageRecord = {
     id: crypto.randomUUID(),
@@ -102,7 +103,7 @@ export async function updatePageIcon(id: string, icon: string): Promise<void> {
 
 export async function softDeletePage(id: string): Promise<void> {
   // Supprime récursivement les sous-pages et leurs blocs
-  const children = await db.pages.filter((p) => p.parentId === id).toArray();
+  const children = await db.pages.filter((p: PageRecord) => p.parentId === id).toArray();
   for (const child of children) await softDeletePage(child.id);
 
   await db.blocks.where("pageId").equals(id).modify({ isDeleted: true });
@@ -124,10 +125,10 @@ export async function loadPageBlocks(pageId: string): Promise<DecryptedBlock[]> 
   const records = await db.blocks
     .where("[pageId+order]")
     .between([pageId, -Infinity], [pageId, Infinity])
-    .filter((b) => !b.isDeleted)
+    .filter((b: BlockRecord) => !b.isDeleted)
     .toArray();
 
-  records.sort((a, b) => a.order - b.order);
+  records.sort((a: BlockRecord, b: BlockRecord) => a.order - b.order);
   return Promise.all(records.map(decryptBlock));
 }
 
@@ -159,14 +160,15 @@ export async function savePageDocument(
   const existing = await db.blocks
     .where("pageId")
     .equals(pageId)
-    .filter((b) => !b.isDeleted)
+    .filter((b: BlockRecord) => !b.isDeleted)
     .toArray();
-  existing.sort((a, b) => a.order - b.order);
+  existing.sort((a: BlockRecord, b: BlockRecord) => a.order - b.order);
 
-  await db.transaction("rw", db.pages, db.blocks, async () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (db as unknown as Dexie).transaction("rw", db.pages as any, db.blocks as any, async () => {
     // Supprimer les blocs en surplus (si le doc a raccourci)
     if (existing.length > nodes.length) {
-      const toDelete = existing.slice(nodes.length).map((b) => b.id);
+      const toDelete = existing.slice(nodes.length).map((b: BlockRecord) => b.id);
       await db.blocks.where("id").anyOf(toDelete).modify({ isDeleted: true, updatedAt: now });
     }
 

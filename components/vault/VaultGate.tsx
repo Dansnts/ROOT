@@ -118,7 +118,7 @@ export default function VaultGate() {
             <div className="text-4xl mb-3">{greeting.emoji}</div>
             <h1 className="text-2xl font-bold text-[var(--text)]">
               {greeting.text},{" "}
-              <span className="text-[var(--accent)]">{storedName}</span> !
+              <span className="text-[var(--accent)]">{storedName}</span>
             </h1>
             <p className="text-sm text-[var(--text-muted)] mt-2">
               Entrez votre mot de passe pour continuer

@@ -5,7 +5,7 @@
  * les déchiffre, et les retourne comme événements FullCalendar.
  */
 
-import { db, type TaskStatus, type TaskPriority } from "./database";
+import { db, type BlockRecord, type TaskStatus, type TaskPriority } from "./database";
 import { decryptValue } from "@/stores/vaultStore";
 import { loadAllPages } from "./BlockService";
 
@@ -46,14 +46,14 @@ function extractText(node: Record<string, unknown>): string {
 }
 
 export async function loadCalendarEvents(): Promise<CalendarEvent[]> {
-  const allBlocks = await db.blocks.filter((b) => !b.isDeleted).toArray();
+  const allBlocks = await db.blocks.filter((b: BlockRecord) => !b.isDeleted).toArray();
   const pages = await loadAllPages();
   const pageMap = new Map(pages.map((p) => [p.id, p.title]));
 
   const events: CalendarEvent[] = [];
 
   await Promise.all(
-    allBlocks.map(async (block) => {
+    allBlocks.map(async (block: BlockRecord) => {
       try {
         const props = await decryptValue<BlockProps>(block.encryptedProperties);
         if (!props.dueDate) return;
