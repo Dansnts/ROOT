@@ -86,8 +86,7 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
     icon: "🖼",
     description: "Image depuis une URL",
     command: (e) => {
-      const url = window.prompt("URL de l'image");
-      if (url) e.chain().focus().setImage({ src: url }).run();
+      document.dispatchEvent(new CustomEvent("tiptap-open-image-picker", { detail: { editor: e } }));
     },
   },
 ];

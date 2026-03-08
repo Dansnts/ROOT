@@ -49,10 +49,12 @@ export default function BlockEditor({ pageId }: Props) {
 
   // TablePicker state
   const [tablePicker, setTablePicker] = useState<{
-    open: boolean;
-    x: number;
-    y: number;
-    editor: Editor | null;
+    open: boolean; x: number; y: number; editor: Editor | null;
+  }>({ open: false, x: 0, y: 0, editor: null });
+
+  // ImageUrlPicker state
+  const [imagePicker, setImagePicker] = useState<{
+    open: boolean; x: number; y: number; editor: Editor | null;
   }>({ open: false, x: 0, y: 0, editor: null });
 
   const editor = useEditor({
@@ -104,14 +106,33 @@ export default function BlockEditor({ pageId }: Props) {
   useEffect(() => {
     function onOpenTablePicker(e: Event) {
       const { editor: ed } = (e as CustomEvent).detail as { editor: Editor };
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) {
-        const rect = sel.getRangeAt(0).getBoundingClientRect();
-        setTablePicker({ open: true, x: rect.left, y: rect.bottom + window.scrollY + 4, editor: ed });
-      }
+      const from = ed.state.selection.from;
+      const coords = ed.view.coordsAtPos(from);
+      setTablePicker({
+        open: true,
+        x: coords.left,
+        y: coords.bottom + window.scrollY + 6,
+        editor: ed,
+      });
     }
     document.addEventListener("tiptap-open-table-picker", onOpenTablePicker);
     return () => document.removeEventListener("tiptap-open-table-picker", onOpenTablePicker);
+  }, []);
+
+  useEffect(() => {
+    function onOpenImagePicker(e: Event) {
+      const { editor: ed } = (e as CustomEvent).detail as { editor: Editor };
+      const from = ed.state.selection.from;
+      const coords = ed.view.coordsAtPos(from);
+      setImagePicker({
+        open: true,
+        x: coords.left,
+        y: coords.bottom + window.scrollY + 6,
+        editor: ed,
+      });
+    }
+    document.addEventListener("tiptap-open-image-picker", onOpenImagePicker);
+    return () => document.removeEventListener("tiptap-open-image-picker", onOpenImagePicker);
   }, []);
 
   useEffect(() => {
@@ -150,6 +171,16 @@ export default function BlockEditor({ pageId }: Props) {
           y={tablePicker.y}
           editor={tablePicker.editor}
           onClose={() => setTablePicker((s) => ({ ...s, open: false }))}
+        />,
+        document.body,
+      )}
+
+      {imagePicker.open && imagePicker.editor && createPortal(
+        <ImageUrlPicker
+          x={imagePicker.x}
+          y={imagePicker.y}
+          editor={imagePicker.editor}
+          onClose={() => setImagePicker((s) => ({ ...s, open: false }))}
         />,
         document.body,
       )}
@@ -196,6 +227,50 @@ function TablePicker({ x, y, editor, onClose }: {
       <p className="text-xs text-center text-[var(--text-faint)]">
         {hover.rows} × {hover.cols}
       </p>
+    </div>
+  );
+}
+
+// ── ImageUrlPicker ────────────────────────────────────────────────────────────
+
+function ImageUrlPicker({ x, y, editor, onClose }: {
+  x: number; y: number; editor: Editor; onClose: () => void;
+}) {
+  const [url, setUrl] = useState("");
+
+  function handleInsert() {
+    const trimmed = url.trim();
+    if (trimmed) editor.chain().focus().setImage({ src: trimmed }).run();
+    onClose();
+  }
+
+  return (
+    <div
+      className="fixed z-[300] bg-[var(--surface-2)] border border-[var(--border-light)] rounded-xl shadow-2xl p-3 flex flex-col gap-2 w-80"
+      style={{ top: y, left: x }}
+    >
+      <p className="text-xs text-[var(--text-faint)]">URL de l&apos;image</p>
+      <input
+        autoFocus
+        type="url"
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleInsert();
+          if (e.key === "Escape") onClose();
+        }}
+        placeholder="https://..."
+        className="w-full bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm text-[var(--text)] outline-none focus:border-[var(--accent-hover)]"
+      />
+      <div className="flex gap-2 justify-end">
+        <button onClick={onClose} className="text-xs text-[var(--text-faint)] hover:text-[var(--text-muted)] px-2 py-1">Annuler</button>
+        <button
+          onClick={handleInsert}
+          className="text-xs px-3 py-1 rounded-lg bg-[var(--surface-3)] border border-[var(--border-light)] text-[var(--accent)] hover:border-[var(--accent)] transition-colors"
+        >
+          Insérer
+        </button>
+      </div>
     </div>
   );
 }
