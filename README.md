@@ -179,20 +179,20 @@ All reads and writes go through `VaultService` (encrypt/decrypt) before touching
 
 ---
 
-## Historique des versions
+## Changelog
 
-| Version | Date | Changements |
+| Version | Date | Changes |
 |---|---|---|
-| **v1.0.0** | 2026-03-08 | Refactoring majeur : `constants.ts`, `BackupService`, `useAppInit`, `KanbanService.updateTask()`. Bug CalDAV fix. TablePicker 6×6 restauré. Image paste/drop. Cursor jumping corrigé. Commandes `/bold` et `/italic`. Icônes SVG dans l'aide. Logos & sprites fond transparent. |
-| **v0.9.0** | — | Corbeille. Système de tags. Calendrier autonome + CalDAV bidirectionnel. Export MD (ZIP/single/multiple/folder). Backup JSON portable. Bubble toolbar. Tableaux éditeur (picker 6×6). Images (URL / paste / drag-drop). |
-| **v0.8.0** | — | Éditeur TipTap (titres H1–H3, listes, code, citation, séparateur). Kanban 4 colonnes. Drag & drop des cartes. Détail de tâche (priorité, tags, date). Tâches visibles dans le Calendrier. |
-| **v0.7.0** | — | Vault Zero-Knowledge (AES-256-GCM + PBKDF2 600k). Sidebar arbre hiérarchique. Drag & drop des pages. Thème clair/sombre persistant. |
+| **v1.0.0** | 2026-03-08 | Major refactor: `constants.ts`, `BackupService`, `useAppInit`, `KanbanService.updateTask()`. CalDAV bug fix. TablePicker 6×6 restored. Image paste/drop. Cursor jumping fixed. `/bold` and `/italic` slash commands. SVG icons in Help modal. Transparent logos & sprites. |
+| **v0.9.0** | 2026-03-07 | Trash with restore. Tag system. Standalone calendar + two-way CalDAV sync. MD export (ZIP/single/multiple/folder). Portable JSON backup. Bubble toolbar. Table picker (6×6 grid). Images (URL / paste / drag-drop). |
+| **v0.8.0** | 2026-03-07 | TipTap block editor (H1–H3, lists, code, quote, divider). Kanban with 4 columns. Card drag & drop. Task detail (priority, tags, due date). Tasks shown in Calendar. |
+| **v0.7.0** | 2026-03-07 | Zero-Knowledge vault (AES-256-GCM + PBKDF2 600k). Hierarchical page tree in sidebar. Page drag & drop. Light/dark theme with persistence. |
 
 ---
 
 ## License
 
-[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) — utilisation libre avec attribution, non-commerciale, sous la même licence.
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) — free to use, share, and adapt with attribution, non-commercially, under the same license.
 
 <p align="center">
   <sub>Zero-Knowledge · AES-GCM 256 · PBKDF2 600k · local-first</sub>
