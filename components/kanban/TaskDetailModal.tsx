@@ -2,12 +2,9 @@
 
 import { useState } from "react";
 import { useKanbanStore } from "@/stores/kanbanStore";
-import { updateTaskDueDate } from "@/lib/KanbanService";
-import { db } from "@/lib/database";
-import { encryptValue, decryptValue } from "@/stores/vaultStore";
+import { updateTask } from "@/lib/KanbanService";
 import type { KanbanTask, TaskProperties } from "@/lib/KanbanService";
 import type { TaskStatus, TaskPriority } from "@/lib/database";
-import { usePagesStore } from "@/stores/pagesStore";
 import { useTagsStore } from "@/stores/tagsStore";
 
 interface Props {
@@ -31,8 +28,7 @@ const PRIORITY_OPTIONS: { value: TaskPriority; label: string; color: string }[] 
 ];
 
 export default function TaskDetailModal({ task, onClose }: Props) {
-  const { moveTask, setPriority, removeTask, loadTasks } = useKanbanStore();
-  const { setActivePage } = usePagesStore();
+  const { removeTask, loadTasks } = useKanbanStore();
   const { tags, setTaskTags } = useTagsStore();
 
   const [title, setTitle]       = useState(task.title);
@@ -45,24 +41,9 @@ export default function TaskDetailModal({ task, onClose }: Props) {
   async function handleSave() {
     setSaving(true);
     try {
-      const block = await db.blocks.get(task.blockId);
-      if (!block) return;
-
-      const content = { type: "paragraph", content: [{ type: "text", text: title.trim() || "Sans titre" }] };
-      const props = await decryptValue<TaskProperties>(block.encryptedProperties);
-      const updatedProps: TaskProperties = { ...props, status, priority, dueDate: dueDate || undefined, tags: taskTags };
-
-      await db.blocks.update(task.blockId, {
-        encryptedContent: await encryptValue(content),
-        encryptedProperties: await encryptValue(updatedProps),
-        updatedAt: Date.now(),
-      });
-
-      if (status   !== task.status)   await moveTask(task.blockId, status);
-      if (priority !== task.priority) await setPriority(task.blockId, priority);
-      if (dueDate  !== (task.dueDate ?? "")) await updateTaskDueDate(task.blockId, dueDate || undefined);
+      const props: TaskProperties = { status, priority, dueDate: dueDate || undefined, tags: taskTags };
+      await updateTask(task.blockId, title, props);
       await setTaskTags(task.blockId, taskTags);
-
       await loadTasks();
       onClose();
     } finally {

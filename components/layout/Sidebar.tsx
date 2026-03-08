@@ -24,6 +24,7 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { useTheme } from "@/hooks/useTheme";
 import { type DecryptedPage } from "@/lib/BlockService";
 import type { AppView } from "@/components/layout/AppShell";
+import { COLOR_PALETTE } from "@/lib/constants";
 
 const SettingsModal = dynamic(() => import("@/components/settings/SettingsModal"), { ssr: false });
 const HelpModal     = dynamic(() => import("@/components/help/HelpModal"),         { ssr: false });
@@ -447,11 +448,7 @@ function PageNode({
 
 // ── Sous-menu catégories (affiché inline sous le bouton Calendrier) ───────────
 
-const CAT_COLORS = [
-  "#ef4444","#f97316","#f59e0b","#84cc16",
-  "#22c55e","#14b8a6","#06b6d4","#3b82f6",
-  "#8b5cf6","#ec4899","#6b7280","#a16207",
-];
+const CAT_COLORS = COLOR_PALETTE;
 
 function CategoriesSubNav({
   activeCategoryId,

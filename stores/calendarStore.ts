@@ -13,7 +13,9 @@ import {
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useCategoriesStore } from "@/stores/categoriesStore";
 import { useTagsStore } from "@/stores/tagsStore";
-import { KANBAN_PAGE_ID } from "@/lib/KanbanService";
+import { KANBAN_PAGE_ID, UNCATEGORIZED_ID } from "@/lib/constants";
+import { extractText } from "@/lib/utils/tiptap";
+export { UNCATEGORIZED_ID };
 import type { CalendarEntry } from "@/lib/database";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -53,17 +55,7 @@ interface CalendarState {
   moveEventToCategory: (blockId: string, newCategoryId: string) => Promise<void>;
 }
 
-// ID virtuel pour les events sans catégorie — jamais stocké en DB, 100% local
-export const UNCATEGORIZED_ID = "__uncategorized__";
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function extractText(node: Record<string, unknown>): string {
-  if (typeof node.text === "string") return node.text;
-  if (Array.isArray(node.content))
-    return (node.content as Record<string, unknown>[]).map(extractText).join("");
-  return "";
-}
 
 function fallbackColor(caldavStatus?: string): string {
   if (caldavStatus === "COMPLETED") return "#3d8a5c";
