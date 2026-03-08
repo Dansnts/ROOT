@@ -193,21 +193,21 @@ export default function HelpModal({ onClose }: Props) {
             </ul>
 
             {/* Gen speech bubble */}
-            <div className="mt-auto pt-4 flex items-end gap-4">
+            <div className="mt-auto pt-4 flex items-start gap-4">
               {/* Bubble */}
-              <div className="flex-1 relative bg-[var(--surface-3)] border border-[var(--border-light)] rounded-2xl rounded-br-sm px-4 py-3">
+              <div className="flex-1 relative bg-[var(--surface-3)] border border-[var(--border-light)] rounded-2xl rounded-tr-sm px-4 py-3">
                 <p className="text-sm text-[var(--text)] italic leading-relaxed">
                   « {section.genSays} »
                 </p>
-                {/* Tail — pointe vers Gēn (en bas à droite) */}
-                <span className="absolute -bottom-2 right-4 w-3 h-3 bg-[var(--surface-3)] border-b border-r border-[var(--border-light)] rotate-45" />
+                {/* Tail — pointe vers Gēn (en haut à droite) */}
+                <span className="absolute -top-2 right-4 w-3 h-3 bg-[var(--surface-3)] border-t border-r border-[var(--border-light)] rotate-45" />
               </div>
 
               {/* Gen */}
               <div className="shrink-0 flex flex-col items-center gap-1 select-none">
                 <Image
                   src={genSrc}
-                  alt="Gen"
+                  alt="Gēn"
                   width={80}
                   height={80}
                   className="object-contain"
