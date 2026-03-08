@@ -105,7 +105,12 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
 
 const suggestionConfig: Omit<SuggestionOptions, "editor"> = {
   char: "/",
-  startOfLine: true,
+  startOfLine: false,
+  allow({ editor }) {
+    const { doc } = editor.state;
+    // Only allow when the document has a single empty paragraph
+    return doc.childCount === 1 && doc.firstChild?.childCount === 0;
+  },
   command({ editor, range, props }) {
     props.command(editor);
     editor.chain().focus().deleteRange(range).run();
