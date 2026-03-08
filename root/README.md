@@ -175,6 +175,49 @@ All reads and writes go through `VaultService` (encrypt/decrypt) before touching
 
 ---
 
+## Changelog
+
+### v0.9 — current
+- **Gen** — pixel panda mascot (根, "root" in Mandarin), help modal with per-feature guide, light/dark variant
+- **Export** — 4 formats: ZIP, single file, separate files, folder (File System Access API)
+- **Import** — fixed backup restore (bulkPut, real error messages, v1+v2 support)
+- **Editor** — custom table size picker (6×6 hover grid), image/GIF paste & drag-drop
+- **Kanban** — tasks decoupled from pages (`__kanban__` virtual ID), tag-based card colors
+- **Calendar** — tag pills on events, "Sans catégorie" virtual bucket for unmatched events, category detail view
+- **k8s** — nginx resolver injected dynamically from pod `/etc/resolv.conf` (fixes CalDAV proxy in Kubernetes)
+
+### v0.8
+- **Tags** — colored tag system, assignable to pages, tasks and calendar events
+- **Trash** — soft-delete with restore and permanent delete
+- **Rich editor** — tables, images, bubble toolbar (bold, italic, link, highlight…)
+- **CalDAV** — two-way sync, RRULE recurring events, timezone-safe date parsing
+
+### v0.7
+- **Calendar** — FullCalendar month/list view, event create/edit/delete modal, drag to reschedule
+- **CalDAV** — category-based calendar mapping, nginx reverse proxy for CORS
+
+### v0.6
+- **Kanban** — persistent task board, status columns, priority, due date
+
+### v0.5
+- **Settings** — CalDAV configuration, username, theme toggle
+- **Export/Import** — Markdown export per page, JSON backup/restore
+
+### v0.4
+- **Folders** — page tree with drag-and-drop reorder, folder terminal view
+
+### v0.3
+- **Tags** — initial tag infrastructure
+
+### v0.2
+- **Editor** — TipTap block editor, slash commands, heading/list/code/quote blocks
+
+### v0.1
+- **Vault** — AES-GCM 256 + PBKDF2, zero-knowledge, IndexedDB storage
+- **Notes** — basic encrypted page creation and editing
+
+---
+
 <p align="center">
   <sub>Zero-Knowledge · AES-GCM 256 · PBKDF2 600k · local-first</sub>
 </p>
