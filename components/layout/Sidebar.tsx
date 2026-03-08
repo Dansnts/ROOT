@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import {
   DndContext,
   DragOverlay,
@@ -139,7 +140,14 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
       {/* Header — Logo + nom */}
       <div className="flex items-center gap-2.5 px-4 py-4 border-b border-[var(--border)]">
         <LogoIcon size={26} />
-        <span className="font-bold text-base tracking-widest text-[var(--accent)] font-mono">ROOT</span>
+        <Image
+          src={theme === "dark" ? "/pictures/logo_dark.png" : "/pictures/logo_light.png"}
+          alt="ROOT"
+          width={64}
+          height={20}
+          style={{ imageRendering: "pixelated" }}
+          unoptimized
+        />
 
         <div className="ml-auto flex items-center gap-1">
           {/* Theme toggle */}
