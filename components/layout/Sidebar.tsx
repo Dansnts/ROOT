@@ -26,6 +26,7 @@ import { type DecryptedPage } from "@/lib/BlockService";
 import type { AppView } from "@/components/layout/AppShell";
 
 const SettingsModal = dynamic(() => import("@/components/settings/SettingsModal"), { ssr: false });
+const HelpModal     = dynamic(() => import("@/components/help/HelpModal"),         { ssr: false });
 
 // ── Icônes SVG inline (currentColor → s'adaptent dark/light auto) ──────────
 const NAV_ITEMS: { id: AppView; label: string; Icon: React.FC<{ size?: number }> }[] = [
@@ -61,6 +62,7 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
   const { theme, toggle: toggleTheme } = useTheme();
 
   const [showSettings, setShowSettings] = useState(false);
+  const [showHelp,     setShowHelp]     = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropPos, setDropPos] = useState<{ id: string; pos: "before" | "after" | "into" } | null>(null);
 
@@ -130,6 +132,7 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
   return (
     <>
     {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+    {showHelp     && <HelpModal     onClose={() => setShowHelp(false)} />}
     <aside className="flex flex-col w-[360px] h-screen bg-[var(--surface)] border-r border-[var(--border)] select-none shrink-0">
 
       {/* Header — Logo + nom */}
@@ -145,6 +148,15 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
             className="w-7 h-7 flex items-center justify-center text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors rounded"
           >
             {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+          </button>
+
+          {/* Aide */}
+          <button
+            onClick={() => setShowHelp(true)}
+            title="Aide — Gen"
+            className="w-7 h-7 flex items-center justify-center text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors rounded text-sm font-bold font-mono"
+          >
+            ?
           </button>
 
           {/* Settings */}
