@@ -12,6 +12,7 @@ import type { DateClickArg } from "@fullcalendar/interaction/index.js";
 import { useCalendarStore, type StoreEvent } from "@/stores/calendarStore";
 import { useCategoriesStore } from "@/stores/categoriesStore";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { useTagsStore } from "@/stores/tagsStore";
 import EventModal from "./EventModal";
 
 const COLOR_PALETTE = [
@@ -30,6 +31,8 @@ export default function CalendarView() {
 
   const { categories, updateCategory, deleteCategory, loadCategories } = useCategoriesStore();
   const { caldav, loadSettings } = useSettingsStore();
+  const { tags } = useTagsStore();
+  const tagById = new Map(tags.map((t) => [t.id, t]));
   const calRef = useRef<FullCalendar>(null);
 
   const [createDate,   setCreateDate]   = useState<string | null>(null);
@@ -107,7 +110,7 @@ export default function CalendarView() {
     allDay: true,
     backgroundColor: e.color,
     borderColor: e.synced ? e.color : "rgba(255,255,255,0.15)",
-    extendedProps: { synced: e.synced },
+    extendedProps: { synced: e.synced, tags: e.tags ?? [] },
   }));
 
   const syncLabel = (() => {
@@ -231,14 +234,33 @@ export default function CalendarView() {
           eventDrop={handleEventDrop}
           eventClick={handleEventClick}
           dateClick={handleDateClick}
-          eventContent={(info) => (
-            <div className="flex items-center gap-1 px-1 py-0.5 truncate w-full">
-              {!info.event.extendedProps.synced && caldav && (
-                <span className="text-[10px] opacity-50 shrink-0" title="Non synchronisé">●</span>
-              )}
-              <span className="truncate text-xs">{info.event.title}</span>
-            </div>
-          )}
+          eventContent={(info) => {
+            const evTags: string[] = info.event.extendedProps.tags ?? [];
+            const tagDefs = evTags.map((id) => tagById.get(id)).filter(Boolean) as { id: string; name: string; color: string }[];
+            return (
+              <div className="flex flex-col px-1 py-0.5 w-full overflow-hidden">
+                <div className="flex items-center gap-1">
+                  {!info.event.extendedProps.synced && caldav && (
+                    <span className="text-[10px] opacity-50 shrink-0" title="Non synchronisé">●</span>
+                  )}
+                  <span className="truncate text-xs font-medium">{info.event.title}</span>
+                </div>
+                {tagDefs.length > 0 && (
+                  <div className="flex flex-wrap gap-0.5 mt-0.5">
+                    {tagDefs.map((tag) => (
+                      <span
+                        key={tag.id}
+                        className="px-1 rounded text-white leading-tight"
+                        style={{ backgroundColor: tag.color, fontSize: 9 }}
+                      >
+                        {tag.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }}
           height="100%"
           dayMaxEvents={3}
           moreLinkClick="popover"

@@ -32,6 +32,7 @@ export interface StoreEvent {
   caldavEtag?: string;
   color: string;
   synced: boolean;
+  tags?: string[];   // IDs des tags (pour affichage pastilles)
 }
 
 export type SyncStatus = "idle" | "syncing" | "error" | "success";
@@ -145,6 +146,7 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
           caldavEtag: props.caldavEtag,
           color,
           synced: !!props.caldavEventId,
+          tags: (props as unknown as { tags?: string[] }).tags,
         });
       } catch { /* bloc inaccessible */ }
     }

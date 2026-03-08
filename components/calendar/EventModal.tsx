@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useCalendarStore, type StoreEvent } from "@/stores/calendarStore";
 import { useCategoriesStore } from "@/stores/categoriesStore";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { useTagsStore } from "@/stores/tagsStore";
 
 interface Props {
   initialDate?: string;
@@ -15,6 +16,11 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
   const { createEvent, updateEvent, deleteEvent, moveEventToCategory } = useCalendarStore();
   const { categories } = useCategoriesStore();
   const { caldav } = useSettingsStore();
+  const { tags } = useTagsStore();
+
+  const eventTagDefs = (event?.tags ?? [])
+    .map((id) => tags.find((t) => t.id === id))
+    .filter(Boolean) as { id: string; name: string; color: string }[];
 
   const isEdit = !!event;
 
@@ -100,6 +106,21 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
             <button onClick={onClose} className="text-[var(--text-faint)] hover:text-[var(--text-muted)]">✕</button>
           </div>
         </div>
+
+        {/* Tags (lecture seule — assignés depuis le Kanban) */}
+        {eventTagDefs.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {eventTagDefs.map((tag) => (
+              <span
+                key={tag.id}
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs text-white font-medium"
+                style={{ backgroundColor: tag.color }}
+              >
+                {tag.name}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Titre */}
         <input
