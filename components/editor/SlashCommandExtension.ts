@@ -73,6 +73,21 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
     description: "Ligne horizontale",
     command: (e) => e.chain().focus().setHorizontalRule().run(),
   },
+  {
+    title: "Tableau",
+    icon: "⊞",
+    description: "Tableau 3×3",
+    command: (e) => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+  },
+  {
+    title: "Image",
+    icon: "🖼",
+    description: "Image depuis une URL",
+    command: (e) => {
+      const url = window.prompt("URL de l'image");
+      if (url) e.chain().focus().setImage({ src: url }).run();
+    },
+  },
 ];
 
 const suggestionConfig: Omit<SuggestionOptions, "editor"> = {
