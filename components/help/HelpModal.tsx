@@ -143,7 +143,7 @@ export default function HelpModal({ onClose }: Props) {
 
         {/* Header */}
         <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)] shrink-0">
-          <span className="text-sm font-semibold text-[var(--text)]">Aide — Gēn te guide</span>
+          <span className="text-sm font-semibold text-[var(--text)]">Aide</span>
           <span className="text-xs text-[var(--text-faint)]">根</span>
           <button onClick={onClose} className="ml-auto text-[var(--text-faint)] hover:text-[var(--text-muted)]">✕</button>
         </div>
