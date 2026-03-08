@@ -60,7 +60,7 @@ export default function BlockEditor({ pageId }: Props) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
-      Placeholder.configure({ placeholder: "Écrivez quelque chose…" }),
+      Placeholder.configure({ placeholder: "" }),
       TaskList,
       TaskItem.configure({ nested: true }),
       Table.configure({ resizable: false }),
