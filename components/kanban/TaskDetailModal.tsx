@@ -8,6 +8,7 @@ import { encryptValue, decryptValue } from "@/stores/vaultStore";
 import type { KanbanTask, TaskProperties } from "@/lib/KanbanService";
 import type { TaskStatus, TaskPriority } from "@/lib/database";
 import { usePagesStore } from "@/stores/pagesStore";
+import { useTagsStore } from "@/stores/tagsStore";
 
 interface Props {
   task: KanbanTask;
@@ -32,12 +33,14 @@ const PRIORITY_OPTIONS: { value: TaskPriority; label: string; color: string }[] 
 export default function TaskDetailModal({ task, onClose }: Props) {
   const { moveTask, setPriority, removeTask, loadTasks } = useKanbanStore();
   const { setActivePage } = usePagesStore();
+  const { tags, setTaskTags } = useTagsStore();
 
-  const [title, setTitle]     = useState(task.title);
-  const [status, setStatus]   = useState<TaskStatus>(task.status);
-  const [priority, setPri]    = useState<TaskPriority>(task.priority);
-  const [dueDate, setDueDate] = useState(task.dueDate ?? "");
-  const [saving, setSaving]   = useState(false);
+  const [title, setTitle]       = useState(task.title);
+  const [status, setStatus]     = useState<TaskStatus>(task.status);
+  const [priority, setPri]      = useState<TaskPriority>(task.priority);
+  const [dueDate, setDueDate]   = useState(task.dueDate ?? "");
+  const [taskTags, setTaskTags_] = useState<string[]>(task.tags ?? []);
+  const [saving, setSaving]     = useState(false);
 
   async function handleSave() {
     setSaving(true);
@@ -47,7 +50,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
 
       const content = { type: "paragraph", content: [{ type: "text", text: title.trim() || "Sans titre" }] };
       const props = await decryptValue<TaskProperties>(block.encryptedProperties);
-      const updatedProps: TaskProperties = { ...props, status, priority, dueDate: dueDate || undefined };
+      const updatedProps: TaskProperties = { ...props, status, priority, dueDate: dueDate || undefined, tags: taskTags };
 
       await db.blocks.update(task.blockId, {
         encryptedContent: await encryptValue(content),
@@ -58,6 +61,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
       if (status   !== task.status)   await moveTask(task.blockId, status);
       if (priority !== task.priority) await setPriority(task.blockId, priority);
       if (dueDate  !== (task.dueDate ?? "")) await updateTaskDueDate(task.blockId, dueDate || undefined);
+      await setTaskTags(task.blockId, taskTags);
 
       await loadTasks();
       onClose();
@@ -132,6 +136,39 @@ export default function TaskDetailModal({ task, onClose }: Props) {
             className="bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text)] text-sm outline-none focus:border-[var(--accent-hover)] transition-colors [color-scheme:dark]"
           />
         </div>
+
+        {/* Tags */}
+        {tags.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs text-[var(--text-faint)] uppercase tracking-wider">Tags</label>
+            <div className="flex flex-wrap gap-2">
+              {tags.map((tag) => {
+                const active = taskTags.includes(tag.id);
+                return (
+                  <button
+                    key={tag.id}
+                    onClick={() => setTaskTags_(active
+                      ? taskTags.filter((id) => id !== tag.id)
+                      : [...taskTags, tag.id]
+                    )}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs border transition-all ${
+                      active
+                        ? "border-transparent text-white"
+                        : "border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--border-light)]"
+                    }`}
+                    style={active ? { backgroundColor: tag.color } : {}}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: tag.color }}
+                    />
+                    {tag.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Page source */}
         {task.pageTitle && (

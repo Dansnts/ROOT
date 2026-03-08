@@ -6,6 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { KanbanTask } from "@/lib/KanbanService";
 import type { TaskPriority } from "@/lib/database";
 import { useKanbanStore } from "@/stores/kanbanStore";
+import { useTagsStore } from "@/stores/tagsStore";
 import TaskDetailModal from "./TaskDetailModal";
 
 const PRIORITY_COLORS: Record<TaskPriority, string> = {
@@ -22,6 +23,8 @@ const PRIORITY_ORDER: TaskPriority[] = ["none", "low", "medium", "high", "urgent
 
 export default function TaskCard({ task }: { task: KanbanTask }) {
   const { removeTask, setPriority } = useKanbanStore();
+  const { tags } = useTagsStore();
+  const taskTagDefs = tags.filter((t) => (task.tags ?? []).includes(t.id));
   const [showDetail, setShowDetail] = useState(false);
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.blockId,
@@ -65,6 +68,21 @@ export default function TaskCard({ task }: { task: KanbanTask }) {
       >
         {task.title}
       </p>
+
+      {/* Tag dots */}
+      {taskTagDefs.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {taskTagDefs.map((tag) => (
+            <span
+              key={tag.id}
+              className="px-1.5 py-0.5 rounded-full text-[10px] text-white font-medium"
+              style={{ backgroundColor: tag.color }}
+            >
+              {tag.name}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Footer */}
       <div className="flex items-center gap-2 flex-wrap">
