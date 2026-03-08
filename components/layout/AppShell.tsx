@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import Sidebar from "./Sidebar";
 import FolderView from "./FolderView";
 import BlockEditor from "@/components/editor/BlockEditor";
 import { usePagesStore } from "@/stores/pagesStore";
 import { useTagsStore } from "@/stores/tagsStore";
-import { useCategoriesStore } from "@/stores/categoriesStore";
-import { useSettingsStore } from "@/stores/settingsStore";
+import { useAppInit } from "@/hooks/useAppInit";
 
 const KanbanBoard        = dynamic(() => import("@/components/kanban/KanbanBoard"),               { ssr: false });
 const CalendarView       = dynamic(() => import("@/components/calendar/CalendarView"),           { ssr: false });
@@ -19,30 +18,11 @@ const TrashView          = dynamic(() => import("@/components/layout/TrashView")
 export type AppView = "notes" | "kanban" | "calendar" | "tags" | "trash";
 
 export default function AppShell() {
-  const { loadPages, activePageId, setActivePage, pages, newPage } = usePagesStore();
-  const { loadTags } = useTagsStore();
-  const { loadCategories } = useCategoriesStore();
-  const { loadSettings } = useSettingsStore();
+  useAppInit();
+  const { activePageId, setActivePage, pages } = usePagesStore();
   const [view, setView]               = useState<AppView>("notes");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadTags();
-    loadSettings().then(() => loadCategories());
-    loadPages().then(() => {
-      const { pages: loaded, activePageId: active } = usePagesStore.getState();
-      if (loaded.length === 0) {
-        newPage("Brouillon");
-      } else if (!active) {
-        // Préférer une feuille à un dossier comme page par défaut
-        const firstPage = [...loaded]
-          .sort((a, b) => a.createdAt - b.createdAt)
-          .find((p) => !p.isFolder) ?? loaded[0];
-        usePagesStore.setState({ activePageId: firstPage.id });
-      }
-    });
-  }, [loadCategories, loadPages, loadSettings, loadTags, newPage]);
 
   const activePage = pages.find((p) => p.id === activePageId);
 

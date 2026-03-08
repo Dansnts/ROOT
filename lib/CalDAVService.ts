@@ -427,7 +427,7 @@ export async function syncCalDAV(
   entry: CalendarEntry
 ): Promise<SyncResult> {
   const result: SyncResult = { created: 0, updated: 0, deleted: 0, errors: 0 };
-  const categoryId = entry.categoryId ?? entry.categoryId;
+  const categoryId = entry.categoryId ?? entry.targetPageId;
   if (!categoryId) return { ...result, errors: 1, errorMessage: "Catégorie non définie pour ce calendrier." };
 
   const blockType = entry.mode === "kanban" ? "task" : "calendar-event";

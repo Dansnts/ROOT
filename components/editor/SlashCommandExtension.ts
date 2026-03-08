@@ -20,6 +20,18 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
     command: (e) => e.chain().focus().setParagraph().run(),
   },
   {
+    title: "Gras",
+    icon: "B",
+    description: "Texte en gras",
+    command: (e) => e.chain().focus().toggleBold().run(),
+  },
+  {
+    title: "Italique",
+    icon: "I",
+    description: "Texte en italique",
+    command: (e) => e.chain().focus().toggleItalic().run(),
+  },
+  {
     title: "Titre 1",
     icon: "H1",
     description: "Grande section",
@@ -76,16 +88,17 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
   {
     title: "Tableau",
     icon: "⊞",
-    description: "Tableau 3×3",
-    command: (e) => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+    description: "Tableau taille personnalisée",
+    command: (e) => {
+      document.dispatchEvent(new CustomEvent("tiptap-open-table-picker", { detail: { editor: e } }));
+    },
   },
   {
     title: "Image",
     icon: "🖼",
     description: "Image depuis une URL",
     command: (e) => {
-      const url = window.prompt("URL de l'image");
-      if (url) e.chain().focus().setImage({ src: url }).run();
+      document.dispatchEvent(new CustomEvent("tiptap-open-image-picker", { detail: { editor: e } }));
     },
   },
 ];

@@ -7,10 +7,10 @@
 
 import { db, type BlockRecord, type TaskStatus, type TaskPriority } from "./database";
 import { encryptValue, decryptValue } from "@/stores/vaultStore";
+import { extractText } from "@/lib/utils/tiptap";
+import { KANBAN_PAGE_ID } from "@/lib/constants";
 
-// ID virtuel utilisé comme pageId pour toutes les tâches Kanban —
-// jamais une vraie page, découplé de l'arbre de notes.
-export const KANBAN_PAGE_ID = "__kanban__";
+export { KANBAN_PAGE_ID };
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -31,16 +31,6 @@ export interface KanbanTask {
   tags?: string[];
   order: number;
   createdAt: number;
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function extractText(node: Record<string, unknown>): string {
-  if (typeof node.text === "string") return node.text;
-  if (Array.isArray(node.content)) {
-    return (node.content as Record<string, unknown>[]).map(extractText).join("");
-  }
-  return "";
 }
 
 // ── Lecture ───────────────────────────────────────────────────────────────────
@@ -163,4 +153,20 @@ export async function createTask(
 
 export async function deleteTask(blockId: string): Promise<void> {
   await db.blocks.update(blockId, { isDeleted: true, updatedAt: Date.now() });
+}
+
+export async function updateTask(
+  blockId: string,
+  title: string,
+  props: TaskProperties
+): Promise<void> {
+  const content = {
+    type: "paragraph",
+    content: [{ type: "text", text: title.trim() || "Sans titre" }],
+  };
+  await db.blocks.update(blockId, {
+    encryptedContent: await encryptValue(content),
+    encryptedProperties: await encryptValue(props),
+    updatedAt: Date.now(),
+  });
 }

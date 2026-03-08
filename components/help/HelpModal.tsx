@@ -4,12 +4,90 @@ import { useState } from "react";
 import Image from "next/image";
 import { useTheme } from "@/hooks/useTheme";
 
+// ── SVG Icons ──────────────────────────────────────────────────────────────────
+
+function IconNotes() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
+      <line x1="10" y1="9" x2="8" y2="9"/>
+    </svg>
+  );
+}
+
+function IconKanban() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="5" height="12" rx="1.5"/>
+      <rect x="9.5" y="3" width="5" height="7" rx="1.5"/>
+      <rect x="16" y="3" width="5" height="16" rx="1.5"/>
+    </svg>
+  );
+}
+
+function IconCalendar() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2"/>
+      <line x1="16" y1="2" x2="16" y2="6"/>
+      <line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+      <circle cx="8" cy="15" r="1" fill="currentColor" stroke="none"/>
+      <circle cx="12" cy="15" r="1" fill="currentColor" stroke="none"/>
+      <circle cx="16" cy="15" r="1" fill="currentColor" stroke="none"/>
+    </svg>
+  );
+}
+
+function IconTag() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+      <line x1="7" y1="7" x2="7.01" y2="7"/>
+    </svg>
+  );
+}
+
+function IconExport() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="17 8 12 3 7 8"/>
+      <line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+  );
+}
+
+function IconTrash() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6"/>
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+      <path d="M10 11v6"/>
+      <path d="M14 11v6"/>
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+    </svg>
+  );
+}
+
+function IconVault() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2"/>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
+  );
+}
+
 // ── Contenu ────────────────────────────────────────────────────────────────────
 
 interface HelpSection {
   id: string;
   label: string;
-  icon: string;
+  icon: React.ReactNode;
   intro: string;
   tips: string[];
   genSays: string;
@@ -19,7 +97,7 @@ const SECTIONS: HelpSection[] = [
   {
     id: "notes",
     label: "Notes & Pages",
-    icon: "📝",
+    icon: <IconNotes />,
     intro: "Crée, organise et édite tes pages dans un arbre hiérarchique chiffré.",
     tips: [
       "Clique sur « + Page » en bas de la sidebar pour créer une page.",
@@ -35,7 +113,7 @@ const SECTIONS: HelpSection[] = [
   {
     id: "kanban",
     label: "Kanban",
-    icon: "📋",
+    icon: <IconKanban />,
     intro: "Gère tes tâches en colonnes — À faire, En cours, Terminé, Annulé.",
     tips: [
       "Clique sur « + » dans une colonne pour créer une tâche rapidement.",
@@ -50,7 +128,7 @@ const SECTIONS: HelpSection[] = [
   {
     id: "calendar",
     label: "Calendrier",
-    icon: "📅",
+    icon: <IconCalendar />,
     intro: "Visualise tes événements et synchronise un agenda CalDAV (Infomaniak, iCloud, Fastmail…).",
     tips: [
       "Clique sur un jour du calendrier pour créer un événement.",
@@ -66,7 +144,7 @@ const SECTIONS: HelpSection[] = [
   {
     id: "tags",
     label: "Tags",
-    icon: "🏷️",
+    icon: <IconTag />,
     intro: "Crée des tags colorés et assigne-les à tes pages, tâches et événements.",
     tips: [
       "Crée un tag depuis la vue Tags ou depuis l'éditeur de tâche.",
@@ -80,7 +158,7 @@ const SECTIONS: HelpSection[] = [
   {
     id: "export",
     label: "Export & Import",
-    icon: "↕️",
+    icon: <IconExport />,
     intro: "Exporte tes notes en Markdown ou fais un backup complet de toutes tes données.",
     tips: [
       "Export Markdown (Paramètres → Export MD) : 4 formats disponibles.",
@@ -96,7 +174,7 @@ const SECTIONS: HelpSection[] = [
   {
     id: "trash",
     label: "Corbeille",
-    icon: "🗑️",
+    icon: <IconTrash />,
     intro: "Les pages supprimées ne disparaissent pas immédiatement — elles vont d'abord dans la corbeille.",
     tips: [
       "Accède à la corbeille depuis la sidebar (icône poubelle en bas).",
@@ -109,7 +187,7 @@ const SECTIONS: HelpSection[] = [
   {
     id: "vault",
     label: "Vault & Sécurité",
-    icon: "🔒",
+    icon: <IconVault />,
     intro: "Toutes tes données sont chiffrées avec AES-256-GCM. Ton mot de passe ne quitte jamais ton appareil.",
     tips: [
       "Le mot de passe n'est jamais stocké — il dérive la clé de chiffrement en mémoire.",
@@ -118,7 +196,7 @@ const SECTIONS: HelpSection[] = [
       "Le backup JSON est déchiffré — garde-le dans un endroit sûr.",
       "Le chiffrement est zero-knowledge : même l'hébergeur ne peut pas lire tes données.",
     ],
-    genSays: "Je veille sur tes données 🐾 — mais garde bien ton mot de passe, je ne peux pas le récupérer !",
+    genSays: "Je veille sur tes données — mais garde bien ton mot de passe, je ne peux pas le récupérer !",
   },
 ];
 
@@ -163,7 +241,7 @@ export default function HelpModal({ onClose }: Props) {
                     : "text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--text)]"
                 }`}
               >
-                <span className="text-base">{s.icon}</span>
+                <span className="shrink-0">{s.icon}</span>
                 <span>{s.label}</span>
               </button>
             ))}
@@ -174,8 +252,9 @@ export default function HelpModal({ onClose }: Props) {
 
             {/* Title + intro */}
             <div>
-              <h3 className="text-base font-semibold text-[var(--text)] mb-1">
-                {section.icon} {section.label}
+              <h3 className="text-base font-semibold text-[var(--text)] mb-1 flex items-center gap-2">
+                <span className="text-[var(--accent)]">{section.icon}</span>
+                {section.label}
               </h3>
               <p className="text-sm text-[var(--text-muted)] leading-relaxed">
                 {section.intro}

@@ -5,12 +5,7 @@ import { useTagsStore } from "@/stores/tagsStore";
 import { usePagesStore } from "@/stores/pagesStore";
 import { useKanbanStore } from "@/stores/kanbanStore";
 import type { TagDefinition } from "@/lib/database";
-
-const PALETTE = [
-  "#ef4444","#f97316","#f59e0b","#84cc16",
-  "#22c55e","#14b8a6","#06b6d4","#3b82f6",
-  "#8b5cf6","#ec4899","#6b7280","#a16207",
-];
+import { COLOR_PALETTE as PALETTE } from "@/lib/constants";
 
 export default function TagsView() {
   const { tags, createTag, updateTag, deleteTag } = useTagsStore();

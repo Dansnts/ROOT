@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { db } from "@/lib/database";
 import { encryptValue, decryptValue } from "@/stores/vaultStore";
 import type { CalDAVConfig, CalendarCategory } from "@/lib/database";
+import { DB_KEYS, LS_KEYS } from "@/lib/constants";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -35,8 +36,8 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
     set({ isLoading: true });
     try {
       const [caldavRow, nameRow] = await Promise.all([
-        db.settings.get("caldav_config"),
-        db.settings.get("user_name"),
+        db.settings.get(DB_KEYS.caldavConfig),
+        db.settings.get(DB_KEYS.userName),
       ]);
 
       let caldav: CalDAVConfig | null = null;
@@ -62,7 +63,7 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
 
       // ── Migration : targetPageId → categoryId ────────────────────────────
       if (caldav?.calendars?.some((c) => c.targetPageId && !c.categoryId)) {
-        const catRow = await db.settings.get("calendar_categories");
+        const catRow = await db.settings.get(DB_KEYS.calendarCategories);
         const existingCats: CalendarCategory[] = catRow
           ? (await decryptValue<CalendarCategory[]>(catRow.encryptedValue) ?? [])
           : [];
@@ -90,12 +91,12 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
         };
         // Persist migrated data
         await db.settings.put({
-          key: "calendar_categories",
+          key: DB_KEYS.calendarCategories,
           encryptedValue: await encryptValue(newCats),
           updatedAt: Date.now(),
         });
         await db.settings.put({
-          key: "caldav_config",
+          key: DB_KEYS.caldavConfig,
           encryptedValue: await encryptValue(caldav),
           updatedAt: Date.now(),
         });
@@ -114,7 +115,7 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
 
   saveCalDAV: async (config) => {
     await db.settings.put({
-      key: "caldav_config",
+      key: DB_KEYS.caldavConfig,
       encryptedValue: await encryptValue(config),
       updatedAt: Date.now(),
     });
@@ -122,19 +123,19 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
   },
 
   clearCalDAV: async () => {
-    await db.settings.delete("caldav_config");
+    await db.settings.delete(DB_KEYS.caldavConfig);
     set({ caldav: null });
   },
 
   saveUserName: async (name: string) => {
     const trimmed = name.trim();
     await db.settings.put({
-      key: "user_name",
+      key: DB_KEYS.userName,
       encryptedValue: await encryptValue(trimmed),
       updatedAt: Date.now(),
     });
     // Aussi dans localStorage pour affichage sur l'écran de verrouillage (avant unlock)
-    try { localStorage.setItem("root-username", trimmed); } catch { /* ignore */ }
+    try { localStorage.setItem(LS_KEYS.username, trimmed); } catch { /* ignore */ }
     set({ userName: trimmed });
   },
 }));

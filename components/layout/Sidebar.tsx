@@ -24,6 +24,7 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { useTheme } from "@/hooks/useTheme";
 import { type DecryptedPage } from "@/lib/BlockService";
 import type { AppView } from "@/components/layout/AppShell";
+import { COLOR_PALETTE } from "@/lib/constants";
 
 const SettingsModal = dynamic(() => import("@/components/settings/SettingsModal"), { ssr: false });
 const HelpModal     = dynamic(() => import("@/components/help/HelpModal"),         { ssr: false });
@@ -289,7 +290,7 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
       {/* Footer — version */}
       <div className="px-4 py-2 border-t border-[var(--border)] flex items-center justify-between">
         <p className="text-[10px] text-[var(--text-faint)] font-mono">
-          ROOT <span className="opacity-40">·</span> v0.9
+          ROOT <span className="opacity-40">·</span> v1.0
         </p>
         <p className="text-[10px] text-[var(--text-faint)] opacity-40 font-mono">
           zero-knowledge
@@ -447,11 +448,7 @@ function PageNode({
 
 // ── Sous-menu catégories (affiché inline sous le bouton Calendrier) ───────────
 
-const CAT_COLORS = [
-  "#ef4444","#f97316","#f59e0b","#84cc16",
-  "#22c55e","#14b8a6","#06b6d4","#3b82f6",
-  "#8b5cf6","#ec4899","#6b7280","#a16207",
-];
+const CAT_COLORS = COLOR_PALETTE;
 
 function CategoriesSubNav({
   activeCategoryId,

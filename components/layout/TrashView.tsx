@@ -5,6 +5,7 @@ import { db, type PageRecord, type BlockRecord } from "@/lib/database";
 import { decryptValue } from "@/stores/vaultStore";
 import { usePagesStore } from "@/stores/pagesStore";
 import { useKanbanStore } from "@/stores/kanbanStore";
+import { extractText } from "@/lib/utils/tiptap";
 
 interface TrashedPage {
   id: string;
@@ -18,14 +19,6 @@ interface TrashedTask {
   id: string;
   title: string;
   deletedAt: number;
-}
-
-function extractText(node: unknown): string {
-  if (!node || typeof node !== "object") return "";
-  const n = node as Record<string, unknown>;
-  if (typeof n.text === "string") return n.text;
-  if (Array.isArray(n.content)) return (n.content as unknown[]).map(extractText).join("");
-  return "";
 }
 
 export default function TrashView() {
