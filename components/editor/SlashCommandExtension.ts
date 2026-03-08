@@ -20,6 +20,18 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
     command: (e) => e.chain().focus().setParagraph().run(),
   },
   {
+    title: "Gras",
+    icon: "B",
+    description: "Texte en gras",
+    command: (e) => e.chain().focus().toggleBold().run(),
+  },
+  {
+    title: "Italique",
+    icon: "I",
+    description: "Texte en italique",
+    command: (e) => e.chain().focus().toggleItalic().run(),
+  },
+  {
     title: "Titre 1",
     icon: "H1",
     description: "Grande section",
@@ -93,7 +105,7 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
 
 const suggestionConfig: Omit<SuggestionOptions, "editor"> = {
   char: "/",
-  startOfLine: false,
+  startOfLine: true,
   command({ editor, range, props }) {
     props.command(editor);
     editor.chain().focus().deleteRange(range).run();
