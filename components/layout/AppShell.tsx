@@ -10,10 +10,11 @@ import { useTagsStore } from "@/stores/tagsStore";
 import { useCategoriesStore } from "@/stores/categoriesStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 
-const KanbanBoard  = dynamic(() => import("@/components/kanban/KanbanBoard"),    { ssr: false });
-const CalendarView = dynamic(() => import("@/components/calendar/CalendarView"), { ssr: false });
-const TagsView     = dynamic(() => import("@/components/tags/TagsView"),         { ssr: false });
-const TrashView    = dynamic(() => import("@/components/layout/TrashView"),      { ssr: false });
+const KanbanBoard        = dynamic(() => import("@/components/kanban/KanbanBoard"),               { ssr: false });
+const CalendarView       = dynamic(() => import("@/components/calendar/CalendarView"),           { ssr: false });
+const CategoryDetailView = dynamic(() => import("@/components/calendar/CategoryDetailView"),     { ssr: false });
+const TagsView           = dynamic(() => import("@/components/tags/TagsView"),                   { ssr: false });
+const TrashView          = dynamic(() => import("@/components/layout/TrashView"),                { ssr: false });
 
 export type AppView = "notes" | "kanban" | "calendar" | "tags" | "trash";
 
@@ -24,6 +25,7 @@ export default function AppShell() {
   const { loadSettings } = useSettingsStore();
   const [view, setView]               = useState<AppView>("notes");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 
   useEffect(() => {
     loadTags();
@@ -56,7 +58,12 @@ export default function AppShell() {
           willChange: "width",
         }}
       >
-        <Sidebar view={view} onViewChange={setView} />
+        <Sidebar
+          view={view}
+          onViewChange={(v) => { setView(v); if (v !== "calendar") setActiveCategoryId(null); }}
+          activeCategoryId={activeCategoryId}
+          onCategorySelect={setActiveCategoryId}
+        />
       </div>
 
       {/* Tab de toggle — toujours visible au bord de la sidebar */}
@@ -103,9 +110,18 @@ export default function AppShell() {
           </div>
         )}
 
-        {view === "calendar" && (
+        {view === "calendar" && !activeCategoryId && (
           <div className="flex-1 overflow-hidden">
             <CalendarView />
+          </div>
+        )}
+
+        {view === "calendar" && activeCategoryId && (
+          <div className="flex-1 overflow-hidden">
+            <CategoryDetailView
+              categoryId={activeCategoryId}
+              onBack={() => setActiveCategoryId(null)}
+            />
           </div>
         )}
 

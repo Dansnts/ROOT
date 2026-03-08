@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import {
   DndContext,
@@ -38,6 +38,8 @@ const NAV_ITEMS: { id: AppView; label: string; Icon: React.FC<{ size?: number }>
 interface SidebarProps {
   view: AppView;
   onViewChange: (v: AppView) => void;
+  activeCategoryId: string | null;
+  onCategorySelect: (id: string | null) => void;
 }
 
 // ── Helpers DnD ───────────────────────────────────────────────────────────────
@@ -51,7 +53,7 @@ function isDescendantOf(targetId: string, ancestorId: string, pages: DecryptedPa
   return false;
 }
 
-export default function Sidebar({ view, onViewChange }: SidebarProps) {
+export default function Sidebar({ view, onViewChange, activeCategoryId, onCategorySelect }: SidebarProps) {
   const { pages, activePageId, newPage, newFolder, setActivePage, movePage, lock } = usePagesStore();
   const { lock: lockVault } = useVaultStore();
   const { lock: lockTags } = useTagsStore();
@@ -168,21 +170,33 @@ export default function Sidebar({ view, onViewChange }: SidebarProps) {
       {/* Navigation principale */}
       <nav className="flex flex-col gap-0.5 px-2 py-2 border-b border-[var(--border)]">
         {NAV_ITEMS.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            onClick={() => onViewChange(id)}
-            className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[15px] transition-colors w-full text-left ${
-              view === id
-                ? "bg-[var(--surface-3)] text-[var(--text)]"
-                : "text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
-            }`}
-          >
-            <Icon size={20} />
-            {label}
-            {view === id && (
-              <span className="ml-auto w-1 h-1 rounded-full bg-[var(--accent)]" />
+          <React.Fragment key={id}>
+            <button
+              onClick={() => onViewChange(id)}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[15px] transition-colors w-full text-left ${
+                view === id
+                  ? "bg-[var(--surface-3)] text-[var(--text)]"
+                  : "text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+              }`}
+            >
+              <Icon size={20} />
+              {label}
+              {view === id && id !== "calendar" && (
+                <span className="ml-auto w-1 h-1 rounded-full bg-[var(--accent)]" />
+              )}
+              {id === "calendar" && view === "calendar" && (
+                <span className="ml-auto text-[10px] text-[var(--text-faint)]">▾</span>
+              )}
+            </button>
+
+            {/* Sous-menu catégories sous Calendrier */}
+            {id === "calendar" && view === "calendar" && (
+              <CategoriesSubNav
+                activeCategoryId={activeCategoryId}
+                onCategorySelect={onCategorySelect}
+              />
             )}
-          </button>
+          </React.Fragment>
         ))}
       </nav>
 
@@ -243,10 +257,7 @@ export default function Sidebar({ view, onViewChange }: SidebarProps) {
         </>
       )}
 
-      {/* Catégories (vue Calendrier) */}
-      {view === "calendar" && <CategoriesPanel />}
-
-      {view !== "notes" && view !== "calendar" && <div className="flex-1" />}
+      {view !== "notes" && <div className="flex-1" />}
 
       {/* Corbeille — toujours en bas */}
       <div className="px-2 py-1 border-t border-[var(--border)]">
@@ -419,7 +430,7 @@ function PageNode({
   );
 }
 
-// ── Panneau Catégories de calendrier ──────────────────────────────────────────
+// ── Sous-menu catégories (affiché inline sous le bouton Calendrier) ───────────
 
 const CAT_COLORS = [
   "#ef4444","#f97316","#f59e0b","#84cc16",
@@ -427,15 +438,23 @@ const CAT_COLORS = [
   "#8b5cf6","#ec4899","#6b7280","#a16207",
 ];
 
-function CategoriesPanel() {
+function CategoriesSubNav({
+  activeCategoryId,
+  onCategorySelect,
+}: {
+  activeCategoryId: string | null;
+  onCategorySelect: (id: string | null) => void;
+}) {
   const { categories, createCategory, updateCategory, deleteCategory } = useCategoriesStore();
   const { events } = useCalendarStore();
 
-  const [creating, setCreating] = useState(false);
-  const [newName,  setNewName]  = useState("");
-  const [newColor, setNewColor] = useState(CAT_COLORS[0]);
+  const [creating,  setCreating]  = useState(false);
+  const [newName,   setNewName]   = useState("");
+  const [newColor,  setNewColor]  = useState(CAT_COLORS[0]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName,  setEditName]  = useState("");
+  const [colorOpenId, setColorOpenId] = useState<string | null>(null);
+  const colorRef = useRef<HTMLDivElement>(null);
 
   const countById = new Map<string, number>();
   for (const ev of events) {
@@ -454,141 +473,132 @@ function CategoriesPanel() {
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-[var(--border)]">
-        <span className="text-[10px] uppercase tracking-widest text-[var(--text-faint)] flex-1">Catégories</span>
+    <div className="ml-3 mt-0.5 mb-1 border-l border-[var(--border)] pl-2 flex flex-col gap-0.5">
+      {/* Header */}
+      <div className="flex items-center justify-between px-2 py-0.5">
+        <span className="text-[9px] uppercase tracking-widest text-[var(--text-faint)]">Catégories</span>
         <button
           onClick={() => { setCreating((v) => !v); setNewName(""); }}
-          className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors"
+          className="text-[var(--accent)] hover:text-[var(--accent-hover)] text-sm leading-none"
           title="Nouvelle catégorie"
         >+</button>
       </div>
 
       {/* Formulaire création */}
       {creating && (
-        <div className="px-3 py-2 border-b border-[var(--border)] flex flex-col gap-2 bg-[var(--surface-2)]">
+        <div className="mx-1 p-2 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] flex flex-col gap-1.5 mb-1">
           <input
             autoFocus
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); if (e.key === "Escape") setCreating(false); }}
             placeholder="Nom de la catégorie"
-            className="w-full bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-2 py-1 text-sm text-[var(--text)] outline-none focus:border-[var(--accent)]"
+            className="w-full bg-[var(--surface-3)] border border-[var(--border)] rounded px-2 py-1 text-xs text-[var(--text)] outline-none focus:border-[var(--accent)]"
           />
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1">
             {CAT_COLORS.map((c) => (
               <button
                 key={c}
                 onClick={() => setNewColor(c)}
-                className="w-5 h-5 rounded-full border-2 transition-all"
+                className="w-4 h-4 rounded-full border-2 transition-all"
                 style={{ backgroundColor: c, borderColor: newColor === c ? "var(--text)" : "transparent" }}
               />
             ))}
           </div>
-          <div className="flex gap-2">
-            <button onClick={handleCreate} className="flex-1 text-xs py-1 rounded-lg bg-[var(--surface-3)] border border-[var(--border-light)] text-[var(--text)] hover:border-[var(--accent)] transition-colors">
+          <div className="flex gap-1.5">
+            <button onClick={handleCreate} className="flex-1 text-[11px] py-0.5 rounded bg-[var(--accent)] text-white hover:opacity-90 transition-opacity">
               Créer
             </button>
-            <button onClick={() => setCreating(false)} className="text-xs py-1 px-2 text-[var(--text-faint)] hover:text-[var(--text-muted)]">
-              ✕
-            </button>
+            <button onClick={() => setCreating(false)} className="text-[11px] px-2 text-[var(--text-faint)] hover:text-[var(--text-muted)]">✕</button>
           </div>
         </div>
       )}
 
       {/* Liste des catégories */}
-      <nav className="flex-1 overflow-y-auto py-1">
-        {categories.length === 0 && (
-          <p className="px-4 py-3 text-xs text-[var(--text-faint)]">
-            Aucune catégorie. Cliquez + pour en créer une.
-          </p>
-        )}
-        {categories.map((cat) => (
-          <div key={cat.id} className="group flex items-center gap-2 px-3 py-1.5 mx-1 rounded-md hover:bg-[var(--surface-2)] transition-colors">
-            {/* Point couleur cliquable */}
-            <ColorDot
-              color={cat.color}
-              onChange={(c) => updateCategory(cat.id, { color: c })}
-            />
+      {categories.length === 0 && !creating && (
+        <p className="px-2 py-1 text-[11px] text-[var(--text-faint)] italic">Aucune catégorie</p>
+      )}
 
-            {/* Nom (éditable en double-clic) */}
+      {categories.map((cat) => (
+        <div key={cat.id} className="relative group">
+          <div
+            className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${
+              activeCategoryId === cat.id
+                ? "bg-[var(--surface-3)] text-[var(--text)]"
+                : "text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+            }`}
+            onClick={() => {
+              if (editingId !== cat.id) onCategorySelect(activeCategoryId === cat.id ? null : cat.id);
+            }}
+          >
+            {/* Point couleur */}
+            <div className="relative shrink-0">
+              <button
+                onClick={(e) => { e.stopPropagation(); setColorOpenId(colorOpenId === cat.id ? null : cat.id); }}
+                className="w-2.5 h-2.5 rounded-full ring-1 ring-transparent hover:ring-[var(--border-light)] transition-all"
+                style={{ backgroundColor: cat.color }}
+                title="Changer la couleur"
+              />
+              {colorOpenId === cat.id && (
+                <div
+                  ref={colorRef}
+                  className="absolute top-full left-0 mt-1 z-40 bg-[var(--surface-2)] border border-[var(--border-light)] rounded-xl shadow-xl p-2 flex flex-wrap gap-1.5"
+                  style={{ minWidth: 110 }}
+                  onMouseLeave={() => setColorOpenId(null)}
+                >
+                  {CAT_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      onClick={(e) => { e.stopPropagation(); updateCategory(cat.id, { color: c }); setColorOpenId(null); }}
+                      className="w-5 h-5 rounded-full border-2 transition-all hover:scale-110"
+                      style={{ backgroundColor: c, borderColor: cat.color === c ? "var(--text)" : "transparent" }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Nom */}
             {editingId === cat.id ? (
               <input
                 autoFocus
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 onBlur={() => handleRename(cat.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleRename(cat.id);
-                  if (e.key === "Escape") setEditingId(null);
-                }}
-                className="flex-1 bg-transparent outline-none text-sm text-[var(--text)] border-b border-[var(--accent)]"
+                onKeyDown={(e) => { if (e.key === "Enter") handleRename(cat.id); if (e.key === "Escape") setEditingId(null); }}
+                onClick={(e) => e.stopPropagation()}
+                className="flex-1 bg-transparent outline-none text-xs text-[var(--text)] border-b border-[var(--accent)]"
               />
             ) : (
               <span
-                className="flex-1 text-sm text-[var(--text-muted)] truncate cursor-default"
-                onDoubleClick={() => { setEditingId(cat.id); setEditName(cat.name); }}
+                className="flex-1 text-[13px] truncate"
+                onDoubleClick={(e) => { e.stopPropagation(); setEditingId(cat.id); setEditName(cat.name); }}
               >
                 {cat.name}
               </span>
             )}
 
             {/* Compteur */}
-            {countById.has(cat.id) && (
-              <span className="text-[10px] text-[var(--text-faint)] shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                {countById.get(cat.id)}
-              </span>
-            )}
+            <span className="text-[10px] text-[var(--text-faint)] shrink-0">
+              {countById.get(cat.id) ?? 0}
+            </span>
 
-            {/* Actions */}
+            {/* Actions hover */}
             <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
               <button
-                onClick={() => { setEditingId(cat.id); setEditName(cat.name); }}
-                className="w-5 h-5 flex items-center justify-center text-xs text-[var(--text-faint)] hover:text-[var(--accent)] rounded"
+                onClick={(e) => { e.stopPropagation(); setEditingId(cat.id); setEditName(cat.name); }}
+                className="w-4 h-4 flex items-center justify-center text-[10px] text-[var(--text-faint)] hover:text-[var(--accent)] rounded"
                 title="Renommer"
               >✎</button>
               <button
-                onClick={() => {
-                  if (confirm(`Supprimer la catégorie "${cat.name}" ?`))
-                    deleteCategory(cat.id);
-                }}
-                className="w-5 h-5 flex items-center justify-center text-xs text-[var(--text-faint)] hover:text-[var(--danger)] rounded"
+                onClick={(e) => { e.stopPropagation(); if (confirm(`Supprimer "${cat.name}" ?`)) deleteCategory(cat.id); }}
+                className="w-4 h-4 flex items-center justify-center text-[10px] text-[var(--text-faint)] hover:text-[var(--danger)] rounded"
                 title="Supprimer"
               >✕</button>
             </div>
           </div>
-        ))}
-      </nav>
-    </div>
-  );
-}
-
-function ColorDot({ color, onChange }: { color: string; onChange: (c: string) => void }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative shrink-0">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="w-3 h-3 rounded-full ring-2 ring-transparent hover:ring-[var(--border-light)] transition-all"
-        style={{ backgroundColor: color }}
-        title="Changer la couleur"
-      />
-      {open && (
-        <div
-          className="absolute top-full left-0 mt-1 z-30 bg-[var(--surface-2)] border border-[var(--border-light)] rounded-xl shadow-xl p-2 flex flex-wrap gap-1.5"
-          style={{ minWidth: 120 }}
-          onMouseLeave={() => setOpen(false)}
-        >
-          {CAT_COLORS.map((c) => (
-            <button
-              key={c}
-              onClick={() => { onChange(c); setOpen(false); }}
-              className="w-5 h-5 rounded-full border-2 transition-all hover:scale-110"
-              style={{ backgroundColor: c, borderColor: color === c ? "var(--text)" : "transparent" }}
-            />
-          ))}
         </div>
-      )}
+      ))}
     </div>
   );
 }

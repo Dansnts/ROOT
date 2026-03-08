@@ -192,10 +192,12 @@ function parseICalToEvents(ical: string, href: string, etag: string): CalDAVEven
 
     const expand = new ICAL.RecurExpansion({ component: vevent, dtstart: ev.startDate });
     const events: CalDAVEvent[] = [];
-    let count = 0;
-    let prevStr = ""; // garde contre boucle infinie si next() ne progresse pas
+    let count = 0;       // occurrences dans la fenêtre (cap MAX_OCC)
+    let iterations = 0;  // toutes les itérations (cap sécurité anti-boucle infinie)
+    let prevStr = "";
 
-    for (let next = expand.next(); next && count < MAX_OCC; next = expand.next()) {
+    for (let next = expand.next(); next && count < MAX_OCC && iterations < 100_000; next = expand.next()) {
+      iterations++;
       const jsDate  = next.toJSDate();
       const dateStr = jsDate.toISOString().split("T")[0];
 
@@ -204,8 +206,10 @@ function parseICalToEvents(ical: string, href: string, etag: string): CalDAVEven
       prevStr = dateStr;
 
       if (jsDate > rangeEnd) break;
-      count++;
+      // Ne pas compter les occurrences antérieures à la fenêtre visible
+      // (sinon des events débutés il y a 5+ ans épuisent MAX_OCC avant d'arriver)
       if (jsDate < rangeStart) continue;
+      count++;
 
       // Calcul de dtend à partir de la durée source (évite getOccurrenceDetails
       // qui est instable dans certaines versions ical.js browser)
