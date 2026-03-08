@@ -195,12 +195,12 @@ export default function HelpModal({ onClose }: Props) {
             {/* Gen speech bubble */}
             <div className="mt-auto pt-4 flex items-end gap-4">
               {/* Bubble */}
-              <div className="flex-1 relative bg-[var(--surface-3)] border border-[var(--border-light)] rounded-2xl rounded-bl-sm px-4 py-3">
+              <div className="flex-1 relative bg-[var(--surface-3)] border border-[var(--border-light)] rounded-2xl rounded-br-sm px-4 py-3">
                 <p className="text-sm text-[var(--text)] italic leading-relaxed">
                   « {section.genSays} »
                 </p>
-                {/* Tail */}
-                <span className="absolute -bottom-2 left-4 w-3 h-3 bg-[var(--surface-3)] border-b border-r border-[var(--border-light)] rotate-45" />
+                {/* Tail — pointe vers Gēn (en bas à droite) */}
+                <span className="absolute -bottom-2 right-4 w-3 h-3 bg-[var(--surface-3)] border-b border-r border-[var(--border-light)] rotate-45" />
               </div>
 
               {/* Gen */}
