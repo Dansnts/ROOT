@@ -4,11 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useCategoriesStore } from "@/stores/categoriesStore";
 import { testCalDAVConnection, discoverCalendars, type DiscoveredCalendar } from "@/lib/CalDAVService";
-import { exportAllPagesAsMarkdown, importMarkdownFile } from "@/lib/ExportService";
+import {
+  exportAllPagesZip,
+  exportAllPagesSingleFile,
+  exportAllPagesMultiple,
+  exportAllPagesFolder,
+  importMarkdownFile,
+} from "@/lib/ExportService";
 import { usePagesStore } from "@/stores/pagesStore";
 import { useCalendarStore } from "@/stores/calendarStore";
 import Dexie from "dexie";
-import { db, type PageRecord, type BlockRecord, type SettingRecord } from "@/lib/database";
+import { db, type PageRecord, type BlockRecord } from "@/lib/database";
 import { encryptValue, decryptValue } from "@/stores/vaultStore";
 import type { CalDAVConfig, CalendarEntry } from "@/lib/database";
 
@@ -350,11 +356,38 @@ function CalendarEntryRow({
 
 // ── Onglet Export ─────────────────────────────────────────────────────────────
 
+type ExportFormat = "zip" | "single" | "multiple" | "folder";
+
+const EXPORT_FORMATS: { id: ExportFormat; label: string; desc: string }[] = [
+  { id: "zip",      label: "ZIP",             desc: "Un .zip avec un fichier .md par page" },
+  { id: "single",   label: "Fichier unique",  desc: "Toutes les pages dans un seul .md" },
+  { id: "multiple", label: "Fichiers séparés", desc: "Un téléchargement par page" },
+  { id: "folder",   label: "Dossier",         desc: "Enregistrer dans un dossier (Chrome/Edge)" },
+];
+
 function ExportTab({ onImport, fileRef }: {
   onImport: (f: File) => Promise<void>;
   fileRef: React.RefObject<HTMLInputElement | null>;
 }) {
   const [importing, setImporting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [format, setFormat]       = useState<ExportFormat>("zip");
+  const [exportErr, setExportErr] = useState<string | null>(null);
+
+  async function handleExport() {
+    setExportErr(null);
+    setExporting(true);
+    try {
+      if (format === "zip")      await exportAllPagesZip();
+      if (format === "single")   await exportAllPagesSingleFile();
+      if (format === "multiple") await exportAllPagesMultiple();
+      if (format === "folder")   await exportAllPagesFolder();
+    } catch (err) {
+      setExportErr(String(err instanceof Error ? err.message : err));
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -368,13 +401,37 @@ function ExportTab({ onImport, fileRef }: {
   return (
     <div className="flex flex-col gap-5">
       {/* Export */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
         <h3 className="text-sm font-medium text-[var(--text)]">Export Markdown</h3>
         <p className="text-xs text-[var(--text-muted)]">
-          Toutes vos pages sont exportées en fichier(s) .md déchiffrés.
+          Toutes vos pages sont exportées en fichiers .md déchiffrés.
         </p>
-        <button onClick={exportAllPagesAsMarkdown} className={btnCls}>
-          ↓ Télécharger toutes les pages (.md)
+        <div className="flex flex-col gap-1.5">
+          {EXPORT_FORMATS.map((f) => (
+            <label
+              key={f.id}
+              className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-[var(--surface-3)] transition-colors"
+            >
+              <input
+                type="radio"
+                name="export-format"
+                value={f.id}
+                checked={format === f.id}
+                onChange={() => setFormat(f.id)}
+                className="mt-0.5 shrink-0 accent-[var(--accent)]"
+              />
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm text-[var(--text)]">{f.label}</span>
+                <span className="text-xs text-[var(--text-faint)]">{f.desc}</span>
+              </div>
+            </label>
+          ))}
+        </div>
+        {exportErr && (
+          <p className="text-xs text-[var(--danger)]">{exportErr}</p>
+        )}
+        <button onClick={handleExport} disabled={exporting} className={btnCls}>
+          {exporting ? "Export en cours…" : "↓ Exporter"}
         </button>
       </div>
 
@@ -441,7 +498,7 @@ function DataTab({ onClose, importRef }: {
         properties: await decryptValue<Record<string, unknown>>(b.encryptedProperties),
       })));
 
-      const settings = await Promise.all(settingRecs.map(async (s: SettingRecord) => ({
+      const settings = await Promise.all(settingRecs.map(async (s: import("@/lib/database").SettingRecord) => ({
         key: s.key, updatedAt: s.updatedAt,
         value: await decryptValue<unknown>(s.encryptedValue),
       })));
@@ -467,58 +524,73 @@ function DataTab({ onClose, importRef }: {
     setStatus("Import en cours…");
     try {
       const text   = await file.text();
-      const backup = JSON.parse(text);
-      if (backup.version !== 2 || !Array.isArray(backup.pages) || !Array.isArray(backup.blocks)) {
-        setStatus("Fichier invalide ou format incompatible (backup v1 non supporté).");
+      const backup = JSON.parse(text) as Record<string, unknown>;
+
+      if (!Array.isArray(backup.pages) || !Array.isArray(backup.blocks)) {
+        setStatus("Fichier invalide — champs pages/blocks manquants.");
+        return;
+      }
+      // Version 1 : blocks avaient "content"/"properties" en clair
+      // Version 2 : idem mais avec "settings"
+      // On supporte les deux tant que pages+blocks sont présents
+      const version = (backup.version as number) ?? 1;
+      if (version > 2) {
+        setStatus(`Format de backup v${version} non supporté par cette version de ROOT.`);
         return;
       }
 
+      setStatus("Ré-chiffrement des données…");
+
       // Ré-chiffrer avec la clé du vault courant
-      const pageRecs = await Promise.all(backup.pages.map(async (p: {
+      const pageRecs = await Promise.all((backup.pages as {
         id: string; parentId: string | null; order: number;
         createdAt: number; updatedAt: number; isDeleted: boolean; isFolder?: boolean;
         title: string; icon?: string;
-      }) => ({
-        id: p.id, parentId: p.parentId, order: p.order,
-        createdAt: p.createdAt, updatedAt: p.updatedAt,
-        isDeleted: p.isDeleted, ...(p.isFolder ? { isFolder: true } : {}),
-        encryptedTitle: await encryptValue(p.title),
+      }[]).map(async (p) => ({
+        id: p.id, parentId: p.parentId ?? null, order: p.order ?? 0,
+        createdAt: p.createdAt ?? Date.now(), updatedAt: p.updatedAt ?? Date.now(),
+        isDeleted: p.isDeleted ?? false,
+        isFolder: p.isFolder ?? false,
+        encryptedTitle: await encryptValue(p.title ?? ""),
         ...(p.icon ? { encryptedIcon: await encryptValue(p.icon) } : {}),
       })));
 
-      const blockRecs = await Promise.all(backup.blocks.map(async (b: {
+      const blockRecs = await Promise.all((backup.blocks as {
         id: string; pageId: string; parentBlockId: string | null;
         type: string; order: number; createdAt: number; updatedAt: number; isDeleted: boolean;
         content: Record<string, unknown>; properties: Record<string, unknown>;
-      }) => ({
-        id: b.id, pageId: b.pageId, parentBlockId: b.parentBlockId,
-        type: b.type, order: b.order,
-        createdAt: b.createdAt, updatedAt: b.updatedAt, isDeleted: b.isDeleted,
-        encryptedContent:    await encryptValue(b.content),
-        encryptedProperties: await encryptValue(b.properties),
+      }[]).map(async (b) => ({
+        id: b.id, pageId: b.pageId, parentBlockId: b.parentBlockId ?? null,
+        type: b.type, order: b.order ?? 0,
+        createdAt: b.createdAt ?? Date.now(), updatedAt: b.updatedAt ?? Date.now(),
+        isDeleted: b.isDeleted ?? false,
+        encryptedContent:    await encryptValue(b.content ?? {}),
+        encryptedProperties: await encryptValue(b.properties ?? {}),
       })));
 
-      const settingRecs = await Promise.all((backup.settings ?? []).map(async (s: {
+      const settingRecs = await Promise.all(((backup.settings ?? []) as {
         key: string; updatedAt: number; value: unknown;
-      }) => ({
-        key: s.key, updatedAt: s.updatedAt,
+      }[]).map(async (s) => ({
+        key: s.key, updatedAt: s.updatedAt ?? Date.now(),
         encryptedValue: await encryptValue(s.value),
       })));
+
+      setStatus("Écriture en base…");
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (db as unknown as Dexie).transaction("rw", db.pages as any, db.blocks as any, db.settings as any, async () => {
         await db.pages.clear();
         await db.blocks.clear();
         await db.settings.clear();
-        if (pageRecs.length)    await db.pages.bulkAdd(pageRecs as never);
-        if (blockRecs.length)   await db.blocks.bulkAdd(blockRecs as never);
-        if (settingRecs.length) await db.settings.bulkAdd(settingRecs as never);
+        if (pageRecs.length)    await db.pages.bulkPut(pageRecs as never);
+        if (blockRecs.length)   await db.blocks.bulkPut(blockRecs as never);
+        if (settingRecs.length) await db.settings.bulkPut(settingRecs as never);
       });
 
       setStatus("Import terminé — rechargement…");
       setTimeout(() => window.location.reload(), 800);
-    } catch {
-      setStatus("Erreur lors de l'import — fichier corrompu ?");
+    } catch (err) {
+      setStatus(`Erreur : ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setBusy(false);
       if (importRef.current) importRef.current.value = "";
