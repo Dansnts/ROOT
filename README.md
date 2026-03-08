@@ -192,10 +192,7 @@ All reads and writes go through `VaultService` (encrypt/decrypt) before touching
 
 ## License
 
-Copyright &copy; 2025 **Dansnts**
-
-This project is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
-Free to use, share, and adapt — with attribution, non-commercially, under the same license.
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) — utilisation libre avec attribution, non-commerciale, sous la même licence.
 
 <p align="center">
   <sub>Zero-Knowledge · AES-GCM 256 · PBKDF2 600k · local-first</sub>
