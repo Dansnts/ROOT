@@ -137,7 +137,7 @@ Lock at any time. The key is erased from memory. The app returns to the password
 ## Run with Docker
 
 ```bash
-docker run -p 8080:80 ghcr.io/<your-username>/root:latest
+docker run -p 8080:80 ghcr.io/Dansnts/root:latest
 ```
 
 Then open `http://localhost:8080`. On first launch, create your vault with a Master Password. Nothing else is required.
@@ -178,6 +178,130 @@ nginx (container)
 All reads and writes go through `VaultService` (encrypt/decrypt) before touching IndexedDB. There is no code path that stores plaintext.
 
 ---
+
+## Identité visuelle
+
+### Logo & mascotte
+
+| Élément | Fichier | Thème |
+|---|---|---|
+| Logo principal | `public/pictures/logo_dark.png` | Sombre — vert `#22d472`, ombre 3D |
+| Logo principal | `public/pictures/logo_light.png` | Clair — orange `#c2440a`, ombre 3D |
+| Mascotte Gēn | `public/pictures/a.png` | Sombre — panda vert, fond transparent |
+| Mascotte Gēn | `public/pictures/a2.png` | Clair — panda orange, fond transparent |
+
+Le logo est rendu en pixel-art (`image-rendering: pixelated`). Les sprites ont un fond transparent — pas de halo blanc sur fond coloré.
+
+### Palette de couleurs
+
+12 couleurs partagées (tags, catégories calendrier) — définies dans `lib/constants.ts` :
+
+| Couleur | Hex | Nom |
+|---|---|---|
+| 🔴 | `#ef4444` | Rouge |
+| 🟠 | `#f97316` | Orange |
+| 🟡 | `#f59e0b` | Ambre |
+| 🟢 | `#84cc16` | Vert-jaune |
+| 🟢 | `#22c55e` | Vert |
+| 🩵 | `#14b8a6` | Teal |
+| 🔵 | `#06b6d4` | Cyan |
+| 🔵 | `#3b82f6` | Bleu |
+| 🟣 | `#8b5cf6` | Violet |
+| 🩷 | `#ec4899` | Rose |
+| ⚫ | `#6b7280` | Gris |
+| 🟤 | `#a16207` | Ocre |
+
+### Variables CSS thème
+
+```css
+/* Communes aux deux thèmes */
+--bg             /* fond principal */
+--surface-2      /* modales, panneaux */
+--surface-3      /* champs de saisie, hover */
+--text           /* texte principal */
+--text-muted     /* texte secondaire */
+--text-faint     /* texte discret / labels */
+--accent         /* couleur d'accentuation (vert sombre / orange clair) */
+--accent-hover   /* variante hover de l'accent */
+--border         /* bordure standard */
+--border-light   /* bordure légère */
+--danger         /* rouge erreur */
+```
+
+### Typographie
+
+- **Interface** : `system-ui` (sans-serif natif)
+- **Code & monospace** : `ui-monospace` via classe `font-mono`
+- **Pixel-art** : `image-rendering: pixelated` sur logos et sprites
+
+---
+
+## Historique des versions
+
+### v1.0.0 — 2026-03-08
+
+Premier release stable. Refactoring majeur + corrections d'éditeur.
+
+**Architecture**
+- Centralisation des constantes (`lib/constants.ts`) : `COLOR_PALETTE`, `KANBAN_PAGE_ID`, `UNCATEGORIZED_ID`, `LS_KEYS`, `DB_KEYS`
+- `lib/utils/tiptap.ts` : `extractText()` partagé, remplace 4 copies dupliquées
+- `lib/BackupService.ts` : `exportBackup()`, `importBackup()`, `nukeVault()` extraits de SettingsModal
+- `hooks/useAppInit.ts` : bootstrap applicatif isolé hors AppShell
+- `KanbanService.updateTask()` : accès DB atomique, supprime les imports DB directs de TaskDetailModal
+- Suppression de `lib/CalendarService.ts` (code mort)
+
+**Corrections**
+- Bug CalDAV : `entry.categoryId ?? entry.categoryId` → `entry.categoryId ?? entry.targetPageId`
+- TablePicker 6×6 restauré (régressé à 3×3 lors d'un refactor)
+- Image paste/drop restauré dans l'éditeur
+- Cursor jumping corrigé : `e.target === e.currentTarget` sur le conteneur
+- Picker viewport : coords sans `window.scrollY` (position fixed), flip au-dessus si manque de place en bas
+
+**Éditeur**
+- Commandes `/` : ajout **Gras** et *Italique*
+- Placeholder supprimé (texte indicatif retiré)
+- Menu slash restauré partout sans restriction
+
+**UI**
+- Modal Aide : icônes emoji remplacées par SVG `stroke="currentColor"` cohérents avec le thème
+- Sprites panda (`a.png`, `a2.png`) : fond blanc supprimé → transparent
+- Logos dark/light : fond transparent, rendu pixel-art 3D perspective
+
+---
+
+### v0.9.0
+
+**Nouvelles fonctionnalités**
+- Corbeille avec restauration et suppression définitive
+- Système de tags (pages, tâches, événements) avec couleurs personnalisables
+- Calendrier autonome avec catégories colorées
+- Synchronisation CalDAV bidirectionnelle (Infomaniak, iCloud, Fastmail, Nextcloud…)
+- Export Markdown : ZIP, fichier unique, fichiers séparés, dossier (Chrome/Edge)
+- Backup JSON portable entre vaults (export/import chiffré → déchiffré → re-chiffré)
+- Barre de formatage flottante sélection de texte (bubble toolbar)
+- Tableaux dans l'éditeur (picker 6×6, grille interactive)
+- Images dans l'éditeur : URL, coller, drag & drop
+
+---
+
+### v0.8.0
+
+**Nouvelles fonctionnalités**
+- Éditeur de blocs TipTap : titres (H1–H3), listes, code, citation, séparateur horizontal
+- Kanban : colonnes À faire / En cours / Terminé / Annulé
+- Drag & drop des cartes Kanban entre colonnes
+- Détail de tâche : description, priorité, tags, date d'échéance
+- Tâches avec date → visibles dans le Calendrier
+
+---
+
+### v0.7.0
+
+**Fondations**
+- Vault Zero-Knowledge : AES-256-GCM + PBKDF2 600k itérations
+- Sidebar avec arbre hiérarchique (pages et dossiers)
+- Drag & drop des pages dans la sidebar
+- Thème clair / sombre avec bascule et persistance
 
 ---
 
