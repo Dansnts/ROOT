@@ -108,12 +108,12 @@ export default function BlockEditor({ pageId }: Props) {
       const { editor: ed } = (e as CustomEvent).detail as { editor: Editor };
       const from = ed.state.selection.from;
       const coords = ed.view.coordsAtPos(from);
-      setTablePicker({
-        open: true,
-        x: coords.left,
-        y: coords.bottom + window.scrollY + 6,
-        editor: ed,
-      });
+      // position: fixed → viewport coords, no scrollY; clamp so picker stays on screen
+      const PICKER_H = TABLE_GRID * 24 + 48;
+      const y = coords.bottom + 6 + PICKER_H > window.innerHeight
+        ? coords.top - PICKER_H - 4
+        : coords.bottom + 6;
+      setTablePicker({ open: true, x: coords.left, y, editor: ed });
     }
     document.addEventListener("tiptap-open-table-picker", onOpenTablePicker);
     return () => document.removeEventListener("tiptap-open-table-picker", onOpenTablePicker);
@@ -124,12 +124,11 @@ export default function BlockEditor({ pageId }: Props) {
       const { editor: ed } = (e as CustomEvent).detail as { editor: Editor };
       const from = ed.state.selection.from;
       const coords = ed.view.coordsAtPos(from);
-      setImagePicker({
-        open: true,
-        x: coords.left,
-        y: coords.bottom + window.scrollY + 6,
-        editor: ed,
-      });
+      const PICKER_H = 110;
+      const y = coords.bottom + 6 + PICKER_H > window.innerHeight
+        ? coords.top - PICKER_H - 4
+        : coords.bottom + 6;
+      setImagePicker({ open: true, x: coords.left, y, editor: ed });
     }
     document.addEventListener("tiptap-open-image-picker", onOpenImagePicker);
     return () => document.removeEventListener("tiptap-open-image-picker", onOpenImagePicker);
@@ -151,8 +150,11 @@ export default function BlockEditor({ pageId }: Props) {
     };
   }, [pageId, editor, isUnlocked]);
 
-  const handleContainerClick = useCallback(() => {
-    editor?.commands.focus("end");
+  const handleContainerClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    // Only focus at end when clicking the padding area, not the editor content itself
+    if (e.target === e.currentTarget) {
+      editor?.commands.focus("end");
+    }
   }, [editor]);
 
   if (!isUnlocked) return null;
