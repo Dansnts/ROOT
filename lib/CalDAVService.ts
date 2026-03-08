@@ -148,6 +148,18 @@ function parseMultistatusResponses(xmlText: string): { href: string; etag: strin
 }
 
 /**
+ * Convertit un ICAL.Time en string YYYY-MM-DD sans passer par toJSDate()
+ * pour éviter le décalage UTC (toISOString() → UTC → mauvais jour pour UTC+X).
+ */
+function icalTimeToDateStr(t: ICAL.Time | null | undefined): string | undefined {
+  if (!t) return undefined;
+  const y = t.year;
+  const m = String(t.month).padStart(2, "0");
+  const d = String(t.day).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
  * Parse un bloc iCal et retourne tous les événements :
  *  - Événement simple → tableau de 1 élément
  *  - Événement récurrent (RRULE) → toutes les occurrences développées sur
@@ -173,22 +185,19 @@ function parseICalToEvents(ical: string, href: string, etag: string): CalDAVEven
 
     // ── Événement simple ──────────────────────────────────────────────────────
     if (!ev.isRecurring()) {
-      const dtstart = ev.startDate?.toJSDate()?.toISOString().split("T")[0];
-      const dtend   = ev.endDate?.toJSDate()?.toISOString().split("T")[0];
+      const dtstart = icalTimeToDateStr(ev.startDate);
+      const dtend   = icalTimeToDateStr(ev.endDate);
       if (!dtstart) return [];
       return [{ uid: baseUid, href, etag, summary, dtstart, dtend, description, location, status }];
     }
 
     // ── Événement récurrent : développement des occurrences ───────────────────
-    const now        = new Date();
-    const rangeStart = new Date(now.getFullYear() - 1, 0, 1);
-    const rangeEnd   = new Date(now.getFullYear() + 2, 11, 31);
-    const MAX_OCC    = 730; // ~2 ans hebdo max
+    const now = new Date();
+    const rangeStartStr = `${now.getFullYear() - 1}-01-01`;
+    const rangeEndStr   = `${now.getFullYear() + 2}-12-31`;
+    const MAX_OCC = 730; // ~2 ans hebdo max
 
-    // Durée de l'événement source (en ms) pour calculer dtend des occurrences
-    const srcStart = ev.startDate?.toJSDate();
-    const srcEnd   = ev.endDate?.toJSDate();
-    const durationMs = srcStart && srcEnd ? srcEnd.getTime() - srcStart.getTime() : 0;
+    const duration = ev.duration; // ICAL.Duration — timezone-safe, pas de ms arithmétique
 
     const expand = new ICAL.RecurExpansion({ component: vevent, dtstart: ev.startDate });
     const events: CalDAVEvent[] = [];
@@ -198,24 +207,25 @@ function parseICalToEvents(ical: string, href: string, etag: string): CalDAVEven
 
     for (let next = expand.next(); next && count < MAX_OCC && iterations < 100_000; next = expand.next()) {
       iterations++;
-      const jsDate  = next.toJSDate();
-      const dateStr = jsDate.toISOString().split("T")[0];
+      // Utilise les propriétés ical.js directement — pas de toJSDate() → pas de décalage UTC
+      const dateStr = icalTimeToDateStr(next)!;
 
-      // Guard : si la date n'avance plus, on arrête
       if (dateStr === prevStr) break;
       prevStr = dateStr;
 
-      if (jsDate > rangeEnd) break;
-      // Ne pas compter les occurrences antérieures à la fenêtre visible
-      // (sinon des events débutés il y a 5+ ans épuisent MAX_OCC avant d'arriver)
-      if (jsDate < rangeStart) continue;
+      if (dateStr > rangeEndStr) break;
+      // Ne pas compter les occurrences hors fenêtre visible
+      if (dateStr < rangeStartStr) continue;
       count++;
 
-      // Calcul de dtend à partir de la durée source (évite getOccurrenceDetails
-      // qui est instable dans certaines versions ical.js browser)
-      const occEnd = durationMs > 0
-        ? new Date(jsDate.getTime() + durationMs).toISOString().split("T")[0]
-        : undefined;
+      // Calcul de dtend via ICAL.Duration (timezone-safe)
+      let occEndStr: string | undefined;
+      if (duration) {
+        const occEndTime = next.clone();
+        occEndTime.addDuration(duration);
+        const candidate = icalTimeToDateStr(occEndTime);
+        if (candidate && candidate !== dateStr) occEndStr = candidate;
+      }
 
       events.push({
         uid: `${baseUid}__${dateStr}`,
@@ -223,7 +233,7 @@ function parseICalToEvents(ical: string, href: string, etag: string): CalDAVEven
         etag,
         summary,
         dtstart: dateStr,
-        dtend: occEnd && occEnd !== dateStr ? occEnd : undefined,
+        dtend: occEndStr,
         description,
         location,
         status,
@@ -231,9 +241,10 @@ function parseICalToEvents(ical: string, href: string, etag: string): CalDAVEven
     }
 
     // Fallback : si l'expansion n'a rien produit, retourner au moins l'événement de base
-    if (events.length === 0 && srcStart) {
-      const dtstart = srcStart.toISOString().split("T")[0];
-      const dtend   = srcEnd?.toISOString().split("T")[0];
+    if (events.length === 0) {
+      const dtstart = icalTimeToDateStr(ev.startDate);
+      if (!dtstart) return [];
+      const dtend = icalTimeToDateStr(ev.endDate);
       return [{ uid: baseUid, href, etag, summary, dtstart, dtend, description, location, status }];
     }
 

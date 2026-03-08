@@ -45,9 +45,13 @@ interface CalendarState {
   createEvent: (data: EventFormData, categoryId: string, calendarEntry?: CalendarEntry) => Promise<void>;
   updateEvent: (blockId: string, data: Partial<EventFormData>) => Promise<void>;
   deleteEvent: (blockId: string) => Promise<void>;
+  deleteEventLocal: (blockId: string) => Promise<void>;
   deleteCalendarEvents: (categoryId: string) => Promise<void>;
   moveEventToCategory: (blockId: string, newCategoryId: string) => Promise<void>;
 }
+
+// ID virtuel pour les events sans catégorie — jamais stocké en DB, 100% local
+export const UNCATEGORIZED_ID = "__uncategorized__";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -74,7 +78,12 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
 
   // ── Charger tous les événements depuis IndexedDB ───────────────────────────
   loadEvents: async () => {
-    const categories = useCategoriesStore.getState().categories;
+    // Si les catégories ne sont pas encore chargées, les charger maintenant
+    let { categories } = useCategoriesStore.getState();
+    if (categories.length === 0) {
+      await useCategoriesStore.getState().loadCategories();
+      categories = useCategoriesStore.getState().categories;
+    }
     const catById = new Map(categories.map((c) => [c.id, c]));
 
     const allBlocks = await db.blocks.filter((b) => !b.isDeleted).toArray();
@@ -91,7 +100,8 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
 
         const cat = catById.get(block.pageId);
         const color = cat?.color ?? fallbackColor(props.status);
-        const categoryName = cat?.name ?? "—";
+        const categoryId = cat ? block.pageId : UNCATEGORIZED_ID;
+        const categoryName = cat?.name ?? "Sans catégorie";
 
         events.push({
           id: block.id,
@@ -101,7 +111,7 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
           end: props.endDate,
           description: props.description,
           location: props.location,
-          categoryId: block.pageId,
+          categoryId,
           categoryName,
           caldavUrl: props.caldavUrl,
           caldavEtag: props.caldavEtag,
@@ -255,20 +265,17 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
     await get().loadEvents();
   },
 
-  // ── Supprimer tous les événements d'une catégorie ─────────────────────────
+  // ── Supprimer localement tous les events importés d'une catégorie ──────────
+  // NE supprime PAS sur le serveur CalDAV (action locale uniquement).
+  // La suppression d'un event individuel depuis le modal pousse bien le DELETE.
   deleteCalendarEvents: async (categoryId) => {
     const blocks = await db.blocks
       .where("pageId").equals(categoryId)
       .filter((b) => !b.isDeleted && (b.type === "calendar-event" || b.type === "task"))
       .toArray();
 
-    const caldav = useSettingsStore.getState().caldav;
     for (const block of blocks) {
       try {
-        const props = await decryptValue<CalDAVBlockProps>(block.encryptedProperties);
-        if (caldav && props.caldavUrl) {
-          await deleteEventFromCalDAV(caldav, props.caldavUrl, props.caldavEtag);
-        }
         await db.blocks.update(block.id, { isDeleted: true, updatedAt: Date.now() });
       } catch { /* skip */ }
     }
@@ -278,6 +285,12 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
   // ── Déplacer un événement vers une autre catégorie ────────────────────────
   moveEventToCategory: async (blockId, newCategoryId) => {
     await db.blocks.update(blockId, { pageId: newCategoryId, updatedAt: Date.now() });
+    await get().loadEvents();
+  },
+
+  // ── Supprimer un événement localement uniquement (sans push serveur) ─────
+  deleteEventLocal: async (blockId) => {
+    await db.blocks.update(blockId, { isDeleted: true, updatedAt: Date.now() });
     await get().loadEvents();
   },
 

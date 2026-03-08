@@ -19,7 +19,7 @@ import { usePagesStore } from "@/stores/pagesStore";
 import { useVaultStore } from "@/stores/vaultStore";
 import { useTagsStore } from "@/stores/tagsStore";
 import { useCategoriesStore } from "@/stores/categoriesStore";
-import { useCalendarStore } from "@/stores/calendarStore";
+import { useCalendarStore, UNCATEGORIZED_ID } from "@/stores/calendarStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useTheme } from "@/hooks/useTheme";
 import { type DecryptedPage } from "@/lib/BlockService";
@@ -517,6 +517,22 @@ function CategoriesSubNav({
       {/* Liste des catégories */}
       {categories.length === 0 && !creating && (
         <p className="px-2 py-1 text-[11px] text-[var(--text-faint)] italic">Aucune catégorie</p>
+      )}
+
+      {/* Entrée virtuelle "Sans catégorie" — 100% locale, pas de sync */}
+      {(countById.get(UNCATEGORIZED_ID) ?? 0) > 0 && (
+        <div
+          className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${
+            activeCategoryId === UNCATEGORIZED_ID
+              ? "bg-[var(--surface-3)] text-[var(--text)]"
+              : "text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+          }`}
+          onClick={() => onCategorySelect(activeCategoryId === UNCATEGORIZED_ID ? null : UNCATEGORIZED_ID)}
+        >
+          <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-[var(--text-faint)] opacity-50" />
+          <span className="flex-1 text-[13px] italic">Sans catégorie</span>
+          <span className="text-[10px] text-[var(--text-faint)] shrink-0">{countById.get(UNCATEGORIZED_ID)}</span>
+        </div>
       )}
 
       {categories.map((cat) => (

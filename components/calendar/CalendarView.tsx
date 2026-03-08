@@ -28,7 +28,7 @@ export default function CalendarView() {
     loadEvents, sync, updateEvent, deleteCalendarEvents,
   } = useCalendarStore();
 
-  const { categories, updateCategory, deleteCategory } = useCategoriesStore();
+  const { categories, updateCategory, deleteCategory, loadCategories } = useCategoriesStore();
   const { caldav, loadSettings } = useSettingsStore();
   const calRef = useRef<FullCalendar>(null);
 
@@ -68,8 +68,10 @@ export default function CalendarView() {
   }
 
   useEffect(() => {
-    loadSettings().then(() => loadEvents());
-  }, [loadEvents, loadSettings]);
+    // Charger settings → catégories → events dans l'ordre pour éviter
+    // que loadEvents() tourne avec catById vide (race condition)
+    loadSettings().then(() => loadCategories()).then(() => loadEvents());
+  }, [loadEvents, loadSettings, loadCategories]);
 
   useEffect(() => {
     if (!caldav?.calendars?.length) return;
@@ -99,7 +101,9 @@ export default function CalendarView() {
     id: e.id,
     title: e.title,
     start: e.start,
-    end: e.end,
+    // Pour les allDay events FullCalendar: end doit être > start (exclusif)
+    // Si end === start ou undefined → on laisse undefined (event 1 jour)
+    end: e.end && e.end > e.start ? e.end : undefined,
     allDay: true,
     backgroundColor: e.color,
     borderColor: e.synced ? e.color : "rgba(255,255,255,0.15)",

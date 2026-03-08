@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { useCalendarStore, type StoreEvent } from "@/stores/calendarStore";
+import { useEffect, useState } from "react";
+import { useCalendarStore, type StoreEvent, UNCATEGORIZED_ID } from "@/stores/calendarStore";
 import { useCategoriesStore } from "@/stores/categoriesStore";
 
 interface Props {
@@ -10,12 +10,16 @@ interface Props {
 }
 
 export default function CategoryDetailView({ categoryId, onBack }: Props) {
-  const { events, loadEvents } = useCalendarStore();
+  const { events, loadEvents, moveEventToCategory, deleteEvent, deleteEventLocal } = useCalendarStore();
   const { categories } = useCategoriesStore();
+  const [reassignId, setReassignId] = useState<string | null>(null);
 
   useEffect(() => { loadEvents(); }, [loadEvents]);
 
-  const category = categories.find((c) => c.id === categoryId);
+  const isUncategorized = categoryId === UNCATEGORIZED_ID;
+  const category = isUncategorized
+    ? { id: UNCATEGORIZED_ID, name: "Sans catégorie", color: "#6b7280" }
+    : categories.find((c) => c.id === categoryId);
   const catEvents = events
     .filter((e) => e.categoryId === categoryId)
     .sort((a, b) => a.start.localeCompare(b.start));
@@ -71,10 +75,25 @@ export default function CategoryDetailView({ categoryId, onBack }: Props) {
         </button>
         <div className="w-px h-4 bg-[var(--border)]" />
         {category && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1">
             <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: category.color }} />
             <h1 className="text-lg font-semibold text-[var(--text)]">{category.name}</h1>
           </div>
+        )}
+
+        {/* Bouton vider — suppression locale uniquement */}
+        {catEvents.length > 0 && (
+          <button
+            onClick={async () => {
+              if (!confirm(`Supprimer les ${catEvents.length} événements localement ?`)) return;
+              for (const ev of catEvents) {
+                await deleteEventLocal(ev.id);
+              }
+            }}
+            className="text-xs px-2 py-1 rounded-lg border border-[var(--border)] text-[var(--text-faint)] hover:text-[var(--danger)] hover:border-[var(--danger)] transition-colors shrink-0"
+          >
+            🗑 Tout supprimer
+          </button>
         )}
       </div>
 
@@ -106,36 +125,82 @@ export default function CategoryDetailView({ categoryId, onBack }: Props) {
                 const isPast = ev.start < today;
                 const isToday = ev.start === today;
                 return (
-                  <div
-                    key={ev.id}
-                    className={`flex items-start gap-3 px-3 py-2 rounded-lg border transition-colors ${
-                      isToday
-                        ? "border-[var(--accent)] bg-[var(--surface-2)]"
-                        : "border-transparent hover:bg-[var(--surface-2)]"
-                    }`}
-                  >
-                    {/* Color bar */}
+                  <div key={ev.id} className="relative">
                     <div
-                      className="w-1 rounded-full shrink-0 mt-0.5"
-                      style={{ backgroundColor: ev.color, height: 36 }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium truncate ${isPast && !isToday ? "text-[var(--text-muted)]" : "text-[var(--text)]"}`}>
-                        {ev.title}
-                      </p>
-                      <p className="text-xs text-[var(--text-faint)]">
-                        {dayLabel(ev.start)}
-                        {ev.end && ev.end !== ev.start && ` → ${dayLabel(ev.end)}`}
-                        {ev.location && ` · ${ev.location}`}
-                      </p>
+                      className={`flex items-start gap-3 px-3 py-2 rounded-lg border transition-colors ${
+                        isToday
+                          ? "border-[var(--accent)] bg-[var(--surface-2)]"
+                          : "border-transparent hover:bg-[var(--surface-2)]"
+                      }`}
+                    >
+                      <div
+                        className="w-1 rounded-full shrink-0 mt-0.5"
+                        style={{ backgroundColor: ev.color, height: 36 }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium truncate ${isPast && !isToday ? "text-[var(--text-muted)]" : "text-[var(--text)]"}`}>
+                          {ev.title}
+                        </p>
+                        <p className="text-xs text-[var(--text-faint)]">
+                          {dayLabel(ev.start)}
+                          {ev.end && ev.end !== ev.start && ` → ${dayLabel(ev.end)}`}
+                          {ev.location && ` · ${ev.location}`}
+                        </p>
+                      </div>
+                      {isToday && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--accent)] text-white shrink-0">
+                          Auj.
+                        </span>
+                      )}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {/* Réassigner (Sans catégorie uniquement) */}
+                        {isUncategorized && categories.length > 0 && (
+                          <button
+                            onClick={() => setReassignId(reassignId === ev.id ? null : ev.id)}
+                            className="text-[10px] px-1.5 py-0.5 rounded border border-[var(--border)] text-[var(--text-faint)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition-colors"
+                            title="Assigner à une catégorie"
+                          >
+                            ⇄
+                          </button>
+                        )}
+                        {/* Supprimer */}
+                        <button
+                          onClick={async () => {
+                            if (isUncategorized) {
+                              // Local uniquement — pas de push serveur pour les non-assignés
+                              await deleteEventLocal(ev.id);
+                            } else {
+                              if (confirm(`Supprimer "${ev.title}" ?`)) await deleteEvent(ev.id);
+                            }
+                          }}
+                          className="text-[10px] px-1.5 py-0.5 rounded border border-[var(--border)] text-[var(--text-faint)] hover:text-[var(--danger)] hover:border-[var(--danger)] transition-colors"
+                          title="Supprimer"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
-                    {isToday && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--accent)] text-white shrink-0">
-                        Auj.
-                      </span>
-                    )}
-                    {ev.synced && !isToday && (
-                      <span className="text-[10px] text-[var(--text-faint)] shrink-0">↻</span>
+
+                    {/* Popup réassignation */}
+                    {reassignId === ev.id && (
+                      <div className="absolute right-0 top-full mt-1 z-20 bg-[var(--surface-2)] border border-[var(--border-light)] rounded-xl shadow-xl p-2 flex flex-col gap-1 min-w-[180px]">
+                        <p className="text-[10px] text-[var(--text-faint)] px-1 pb-1 border-b border-[var(--border)]">
+                          Assigner à…
+                        </p>
+                        {categories.map((cat) => (
+                          <button
+                            key={cat.id}
+                            onClick={async () => {
+                              await moveEventToCategory(ev.id, cat.id);
+                              setReassignId(null);
+                            }}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-left hover:bg-[var(--surface-3)] transition-colors"
+                          >
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                            <span className="text-[var(--text)] truncate">{cat.name}</span>
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </div>
                 );
