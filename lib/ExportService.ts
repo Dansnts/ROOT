@@ -2,10 +2,11 @@
  * ExportService.ts
  *
  * Conversion TipTap JSON ↔ Markdown.
- * Export : chaque page déchiffrée → fichier .md téléchargeable.
+ * Export : chaque page déchiffrée → différents formats.
  * Import : fichier .md → page + blocs chiffrés dans IndexedDB.
  */
 
+import { zipSync, strToU8 } from "fflate";
 import { loadAllPages, loadPageBlocks, createPage, savePageDocument } from "./BlockService";
 
 // ── TipTap JSON → Markdown ────────────────────────────────────────────────────
@@ -44,7 +45,7 @@ function listItemToMarkdown(node: Record<string, unknown>, prefix: string): stri
   return `${prefix}${text}`;
 }
 
-function nodeToMarkdown(node: Record<string, unknown>, listIndex?: number): string {
+function nodeToMarkdown(node: Record<string, unknown>): string {
   const type = node.type as string;
   const attrs = (node.attrs ?? {}) as Record<string, unknown>;
 
@@ -53,19 +54,15 @@ function nodeToMarkdown(node: Record<string, unknown>, listIndex?: number): stri
       const level = (attrs.level as number) ?? 1;
       return `${"#".repeat(level)} ${contentToInline(node)}`;
     }
-    case "paragraph": {
-      const text = contentToInline(node);
-      return text || "";
-    }
+    case "paragraph":
+      return contentToInline(node) || "";
     case "bulletList": {
       const items = (node.content as Record<string, unknown>[]) ?? [];
       return items.map((li) => listItemToMarkdown(li, "- ")).join("\n");
     }
     case "orderedList": {
       const items = (node.content as Record<string, unknown>[]) ?? [];
-      return items
-        .map((li, i) => listItemToMarkdown(li, `${i + 1}. `))
-        .join("\n");
+      return items.map((li, i) => listItemToMarkdown(li, `${i + 1}. `)).join("\n");
     }
     case "taskList": {
       const items = (node.content as Record<string, unknown>[]) ?? [];
@@ -78,9 +75,7 @@ function nodeToMarkdown(node: Record<string, unknown>, listIndex?: number): stri
     }
     case "blockquote": {
       const children = (node.content as Record<string, unknown>[]) ?? [];
-      return children
-        .map((n) => `> ${contentToInline(n)}`)
-        .join("\n");
+      return children.map((n) => `> ${contentToInline(n)}`).join("\n");
     }
     case "codeBlock": {
       const lang = (attrs.language as string) ?? "";
@@ -91,8 +86,6 @@ function nodeToMarkdown(node: Record<string, unknown>, listIndex?: number): stri
     default:
       return contentToInline(node);
   }
-
-  void listIndex;
 }
 
 function documentToMarkdown(title: string, nodes: Record<string, unknown>[]): string {
@@ -104,49 +97,124 @@ function documentToMarkdown(title: string, nodes: Record<string, unknown>[]): st
   return lines.join("\n").trimEnd() + "\n";
 }
 
-// ── Export ────────────────────────────────────────────────────────────────────
+function safeFilename(title: string): string {
+  return title.replace(/[^a-z0-9\-_()[\] ]/gi, "_").trim() || "page";
+}
 
-export async function exportPageAsMarkdown(pageId: string, title: string): Promise<void> {
-  const blocks = await loadPageBlocks(pageId);
-  const nodes = blocks.map((b) => b.content);
-  const md = documentToMarkdown(title, nodes);
+// ── Collect all pages as markdown strings ─────────────────────────────────────
 
-  const blob = new Blob([md], { type: "text/markdown; charset=utf-8" });
+async function collectAllPages(): Promise<{ title: string; filename: string; md: string }[]> {
+  const pages = (await loadAllPages()).sort((a, b) => a.createdAt - b.createdAt);
+  const result = [];
+  for (const page of pages) {
+    const blocks = await loadPageBlocks(page.id);
+    const nodes = blocks.map((b) => b.content);
+    const md = documentToMarkdown(page.title, nodes);
+    result.push({ title: page.title, filename: safeFilename(page.title) + ".md", md });
+  }
+  return result;
+}
+
+function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${title.replace(/[^a-z0-9]/gi, "_")}.md`;
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
 }
 
-export async function exportAllPagesAsMarkdown(): Promise<void> {
-  const pages = await loadAllPages();
+// ── Export formats ────────────────────────────────────────────────────────────
+
+/** ZIP : un .md par page dans une archive. */
+export async function exportAllPagesZip(): Promise<void> {
+  const pages = await collectAllPages();
   if (pages.length === 0) return;
 
-  // Si une seule page, téléchargement direct
+  const files: Record<string, Uint8Array> = {};
+  // Dédoublonner les noms de fichiers
+  const seen = new Map<string, number>();
+  for (const { filename, md } of pages) {
+    const count = seen.get(filename) ?? 0;
+    seen.set(filename, count + 1);
+    const finalName = count === 0 ? filename : filename.replace(/\.md$/, `_${count}.md`);
+    files[finalName] = strToU8(md);
+  }
+
+  const zipped = zipSync(files, { level: 6 });
+  const blob = new Blob([zipped.buffer as ArrayBuffer], { type: "application/zip" });
+  const date = new Date().toISOString().slice(0, 10);
+  triggerDownload(blob, `root_export_${date}.zip`);
+}
+
+/** Fichier unique : toutes les pages concaténées en un seul .md. */
+export async function exportAllPagesSingleFile(): Promise<void> {
+  const pages = await collectAllPages();
+  if (pages.length === 0) return;
   if (pages.length === 1) {
-    await exportPageAsMarkdown(pages[0].id, pages[0].title);
+    triggerDownload(new Blob([pages[0].md], { type: "text/markdown; charset=utf-8" }), pages[0].filename);
     return;
   }
+  const combined = pages.map((p) => p.md).join("\n---\n\n");
+  triggerDownload(
+    new Blob([combined], { type: "text/markdown; charset=utf-8" }),
+    `root_export_${new Date().toISOString().slice(0, 10)}.md`
+  );
+}
 
-  // Plusieurs pages → concaténation en un seul fichier
-  const sections: string[] = [];
-  for (const page of pages.sort((a, b) => a.createdAt - b.createdAt)) {
-    const blocks = await loadPageBlocks(page.id);
-    const nodes = blocks.map((b) => b.content);
-    sections.push(documentToMarkdown(page.title, nodes));
+/** Fichiers séparés : un téléchargement par page. */
+export async function exportAllPagesMultiple(): Promise<void> {
+  const pages = await collectAllPages();
+  if (pages.length === 0) return;
+  const seen = new Map<string, number>();
+  for (const { filename, md } of pages) {
+    const count = seen.get(filename) ?? 0;
+    seen.set(filename, count + 1);
+    const finalName = count === 0 ? filename : filename.replace(/\.md$/, `_${count}.md`);
+    triggerDownload(new Blob([md], { type: "text/markdown; charset=utf-8" }), finalName);
+    // Petit délai pour que le navigateur ne bloque pas les téléchargements multiples
+    await new Promise((r) => setTimeout(r, 200));
+  }
+}
+
+/** Dossier : File System Access API (Chrome/Edge uniquement). */
+export async function exportAllPagesFolder(): Promise<void> {
+  if (!("showDirectoryPicker" in window)) {
+    throw new Error("Votre navigateur ne supporte pas la sélection de dossier (utilisez Chrome ou Edge).");
   }
 
-  const blob = new Blob([sections.join("\n---\n\n")], {
-    type: "text/markdown; charset=utf-8",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "root_export.md";
-  a.click();
-  URL.revokeObjectURL(url);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const dirHandle = await (window as any).showDirectoryPicker({ mode: "readwrite" });
+  const pages = await collectAllPages();
+  const seen = new Map<string, number>();
+
+  for (const { filename, md } of pages) {
+    const count = seen.get(filename) ?? 0;
+    seen.set(filename, count + 1);
+    const finalName = count === 0 ? filename : filename.replace(/\.md$/, `_${count}.md`);
+    const fileHandle = await dirHandle.getFileHandle(finalName, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(md);
+    await writable.close();
+  }
+}
+
+// ── Compat alias ──────────────────────────────────────────────────────────────
+
+/** @deprecated — utilisé en interne ou pour export page unique */
+export async function exportPageAsMarkdown(pageId: string, title: string): Promise<void> {
+  const blocks = await loadPageBlocks(pageId);
+  const nodes = blocks.map((b) => b.content);
+  const md = documentToMarkdown(title, nodes);
+  triggerDownload(
+    new Blob([md], { type: "text/markdown; charset=utf-8" }),
+    safeFilename(title) + ".md"
+  );
+}
+
+/** @deprecated — remplacé par les 4 formats ci-dessus */
+export async function exportAllPagesAsMarkdown(): Promise<void> {
+  await exportAllPagesSingleFile();
 }
 
 // ── Import Markdown → Page ────────────────────────────────────────────────────
@@ -207,7 +275,24 @@ function markdownToTipTapDoc(md: string): Record<string, unknown> {
       continue;
     }
 
-    // Bullet list item
+    // Task list (avant bullet list pour matcher "- [x]" avant "- ")
+    if (/^- \[(x| )\]\s/.test(line)) {
+      const items: Record<string, unknown>[] = [];
+      while (i < lines.length && /^- \[(x| )\]\s/.test(lines[i])) {
+        const checked = lines[i][3] === "x";
+        const text = lines[i].slice(6);
+        items.push({
+          type: "taskItem",
+          attrs: { checked },
+          content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+        });
+        i++;
+      }
+      nodes.push({ type: "taskList", content: items });
+      continue;
+    }
+
+    // Bullet list
     if (/^[-*+]\s/.test(line)) {
       const items: Record<string, unknown>[] = [];
       while (i < lines.length && /^[-*+]\s/.test(lines[i])) {
@@ -236,23 +321,6 @@ function markdownToTipTapDoc(md: string): Record<string, unknown> {
       continue;
     }
 
-    // Task list
-    if (/^- \[(x| )\]\s/.test(line)) {
-      const items: Record<string, unknown>[] = [];
-      while (i < lines.length && /^- \[(x| )\]\s/.test(lines[i])) {
-        const checked = lines[i][3] === "x";
-        const text = lines[i].slice(6);
-        items.push({
-          type: "taskItem",
-          attrs: { checked },
-          content: [{ type: "paragraph", content: [{ type: "text", text }] }],
-        });
-        i++;
-      }
-      nodes.push({ type: "taskList", content: items });
-      continue;
-    }
-
     // Empty line
     if (line.trim() === "") {
       i++;
@@ -273,7 +341,6 @@ function markdownToTipTapDoc(md: string): Record<string, unknown> {
 export async function importMarkdownFile(file: File): Promise<void> {
   const text = await file.text();
 
-  // Titre = nom du fichier sans extension (ou première ligne H1 si présente)
   let title = file.name.replace(/\.md$/i, "").replace(/_/g, " ");
   const firstLine = text.split("\n")[0];
   if (firstLine.startsWith("# ")) title = firstLine.slice(2).trim();
