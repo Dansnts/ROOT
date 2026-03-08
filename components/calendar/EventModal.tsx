@@ -2,46 +2,42 @@
 
 import { useState } from "react";
 import { useCalendarStore, type StoreEvent } from "@/stores/calendarStore";
-import { usePagesStore } from "@/stores/pagesStore";
+import { useCategoriesStore } from "@/stores/categoriesStore";
 import { useSettingsStore } from "@/stores/settingsStore";
-import type { CalendarEntry } from "@/lib/database";
 
 interface Props {
-  // Mode création : date pré-remplie, pas d'event existant
   initialDate?: string;
-  // Mode édition : event existant
   event?: StoreEvent;
   onClose: () => void;
 }
 
 export default function EventModal({ initialDate, event, onClose }: Props) {
-  const { createEvent, updateEvent, deleteEvent } = useCalendarStore();
-  const { pages, activePageId } = usePagesStore();
+  const { createEvent, updateEvent, deleteEvent, moveEventToCategory } = useCalendarStore();
+  const { categories } = useCategoriesStore();
   const { caldav } = useSettingsStore();
 
   const isEdit = !!event;
 
-  // Calendriers en mode "calendar" uniquement (pour la création d'événements)
-  const calendarEntries: CalendarEntry[] = caldav?.calendars.filter((c) => c.mode === "calendar") ?? [];
-  const defaultEntry = calendarEntries[0];
+  // Calendriers CalDAV indexés par categoryId
+  const calByCategoryId = new Map(
+    (caldav?.calendars ?? []).map((c) => [c.categoryId, c])
+  );
+
+  // Catégorie courante de l'événement en édition
+  const defaultCategoryId = isEdit
+    ? event.categoryId
+    : (categories[0]?.id ?? "");
 
   const [summary,     setSummary]     = useState(event?.title       ?? "");
   const [dtstart,     setDtstart]     = useState(event?.start       ?? initialDate ?? "");
   const [dtend,       setDtend]       = useState(event?.end         ?? "");
   const [description, setDescription] = useState(event?.description ?? "");
   const [location,    setLocation]    = useState(event?.location    ?? "");
+  const [categoryId,  setCategoryId]  = useState<string>(defaultCategoryId);
   const [saving,      setSaving]      = useState(false);
   const [deleting,    setDeleting]    = useState(false);
 
-  // Sélection du calendrier CalDAV cible (mode création uniquement)
-  const [selectedEntryUrl, setSelectedEntryUrl] = useState<string>(defaultEntry?.url ?? "");
-  const selectedEntry = calendarEntries.find((c) => c.url === selectedEntryUrl);
-
-  // Page cible : déduite du calendrier sélectionné, ou choix manuel si pas de CalDAV
-  const availablePages = pages.filter((p) => !p.isDeleted);
-  const autoPageId = selectedEntry?.targetPageId;
-  const [manualPageId, setManualPageId] = useState(event?.pageId ?? activePageId ?? availablePages[0]?.id ?? "");
-  const effectivePageId = autoPageId ?? manualPageId;
+  const selectedEntry = calByCategoryId.get(categoryId);
 
   async function handleSave() {
     if (!summary.trim() || !dtstart) return;
@@ -56,8 +52,11 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
       };
       if (isEdit) {
         await updateEvent(event.id, data);
+        if (categoryId !== event.categoryId) {
+          await moveEventToCategory(event.id, categoryId);
+        }
       } else {
-        await createEvent(data, effectivePageId, selectedEntry);
+        await createEvent(data, categoryId, selectedEntry);
       }
       onClose();
     } finally {
@@ -158,38 +157,17 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
           />
         </div>
 
-        {/* Calendrier cible (création uniquement) */}
-        {!isEdit && calendarEntries.length > 0 && (
+        {/* Catégorie */}
+        {categories.length > 0 && (
           <div className="flex flex-col gap-1.5">
-            <label className={labelCls}>Calendrier</label>
+            <label className={labelCls}>Catégorie</label>
             <select
-              value={selectedEntryUrl}
-              onChange={(e) => setSelectedEntryUrl(e.target.value)}
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
               className={inputCls}
             >
-              {calendarEntries.map((c) => (
-                <option key={c.url} value={c.url}>
-                  {c.displayName}
-                </option>
-              ))}
-            </select>
-            {selectedEntry?.targetPageId === undefined && (
-              <p className="text-[10px] text-[var(--danger)]">Ce calendrier n&apos;a pas de page cible configurée.</p>
-            )}
-          </div>
-        )}
-
-        {/* Page manuelle (si pas de CalDAV ou calendrier sans page cible) */}
-        {!isEdit && calendarEntries.length === 0 && (
-          <div className="flex flex-col gap-1.5">
-            <label className={labelCls}>Page ROOT associée</label>
-            <select
-              value={manualPageId}
-              onChange={(e) => setManualPageId(e.target.value)}
-              className={inputCls}
-            >
-              {availablePages.map((p) => (
-                <option key={p.id} value={p.id}>{p.title}</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           </div>
@@ -214,7 +192,7 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !summary.trim() || !dtstart || (!isEdit && !effectivePageId)}
+            disabled={saving || !summary.trim() || !dtstart}
             className="px-4 py-2 rounded-lg text-sm bg-[var(--surface-3)] border border-[var(--border-light)] text-[var(--text)] hover:border-[var(--accent)] transition-colors disabled:opacity-40"
           >
             {saving ? "Sauvegarde…" : isEdit ? "Enregistrer" : selectedEntry ? "Créer et synchroniser" : "Créer"}

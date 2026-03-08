@@ -10,30 +10,67 @@ import frLocale from "@fullcalendar/core/locales/fr.js";
 import type { EventClickArg, EventDropArg } from "@fullcalendar/core/index.js";
 import type { DateClickArg } from "@fullcalendar/interaction/index.js";
 import { useCalendarStore, type StoreEvent } from "@/stores/calendarStore";
+import { useCategoriesStore } from "@/stores/categoriesStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import EventModal from "./EventModal";
 
-const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const COLOR_PALETTE = [
+  "#ef4444","#f97316","#f59e0b","#84cc16",
+  "#22c55e","#14b8a6","#06b6d4","#3b82f6",
+  "#8b5cf6","#ec4899","#6b7280","#a16207",
+];
+
+const SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
 export default function CalendarView() {
   const {
     events, syncStatus, lastSyncAt,
-    loadEvents, sync, updateEvent,
+    loadEvents, sync, updateEvent, deleteCalendarEvents,
   } = useCalendarStore();
 
+  const { categories, updateCategory, deleteCategory } = useCategoriesStore();
   const { caldav, loadSettings } = useSettingsStore();
   const calRef = useRef<FullCalendar>(null);
 
-  // Modal state
   const [createDate,   setCreateDate]   = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<StoreEvent | null>(null);
+  const [colorPickerId, setColorPickerId] = useState<string | null>(null);
 
-  // Chargement initial
+  async function handleCategoryColorChange(catId: string, newColor: string) {
+    await updateCategory(catId, { color: newColor });
+    await loadEvents();
+    setColorPickerId(null);
+  }
+
+  async function handleClearCategory(catId: string) {
+    if (!confirm("Supprimer tous les événements de cette catégorie ?")) return;
+    await deleteCalendarEvents(catId);
+    setColorPickerId(null);
+  }
+
+  async function handleRemoveCategory(catId: string) {
+    if (!confirm("Supprimer cette catégorie ? (les événements déjà importés seront supprimés)")) return;
+    await deleteCalendarEvents(catId);
+    await deleteCategory(catId);
+    // Retirer le lien categoryId dans la config CalDAV
+    const caldavState = useSettingsStore.getState().caldav;
+    if (caldavState) {
+      const { saveCalDAV } = useSettingsStore.getState();
+      await saveCalDAV({
+        ...caldavState,
+        calendars: caldavState.calendars.map((c) =>
+          c.categoryId === catId ? { ...c, categoryId: undefined } : c
+        ),
+      });
+    }
+    await loadEvents();
+    setColorPickerId(null);
+  }
+
   useEffect(() => {
     loadSettings().then(() => loadEvents());
   }, [loadEvents, loadSettings]);
 
-  // Sync initiale + auto-sync toutes les 5 min si CalDAV configuré
   useEffect(() => {
     if (!caldav?.calendars?.length) return;
     sync();
@@ -42,20 +79,17 @@ export default function CalendarView() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caldav?.serverUrl]);
 
-  // Drag & drop → mise à jour de la date
   const handleEventDrop = useCallback(async (info: EventDropArg) => {
     const newDate = info.event.startStr.split("T")[0];
     const endDate = info.event.endStr ? info.event.endStr.split("T")[0] : undefined;
     await updateEvent(info.event.id, { dtstart: newDate, dtend: endDate });
   }, [updateEvent]);
 
-  // Clic sur une date vide → créer
   const handleDateClick = useCallback((info: DateClickArg) => {
     setCreateDate(info.dateStr);
     setEditingEvent(null);
   }, []);
 
-  // Clic sur un événement → éditer
   const handleEventClick = useCallback((info: EventClickArg) => {
     const ev = events.find((e) => e.id === info.event.id);
     if (ev) { setEditingEvent(ev); setCreateDate(null); }
@@ -80,12 +114,75 @@ export default function CalendarView() {
     return null;
   })();
 
+  // Compter les événements par catégorie
+  const countByCategory = new Map<string, number>();
+  for (const ev of events) {
+    countByCategory.set(ev.categoryId, (countByCategory.get(ev.categoryId) ?? 0) + 1);
+  }
+
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden" onClick={() => setColorPickerId(null)}>
       {/* Header */}
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)] shrink-0">
-        <h2 className="text-lg font-semibold">Calendrier</h2>
-        <span className="text-xs text-[var(--text-faint)]">{events.length} événement{events.length !== 1 ? "s" : ""}</span>
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)] shrink-0 flex-wrap" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-lg font-semibold shrink-0">Calendrier</h2>
+        <span className="text-xs text-[var(--text-faint)] shrink-0">{events.length} événement{events.length !== 1 ? "s" : ""}</span>
+
+        {/* Légende des catégories */}
+        {categories.length > 0 && (
+          <div className="flex items-center gap-3 flex-wrap">
+            {categories.map((cat) => (
+              <div key={cat.id} className="relative">
+                <button
+                  onClick={() => setColorPickerId(colorPickerId === cat.id ? null : cat.id)}
+                  className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors group"
+                  title="Modifier la catégorie"
+                >
+                  <span
+                    className="w-3 h-3 rounded-full shrink-0 ring-2 ring-transparent group-hover:ring-[var(--border-light)] transition-all"
+                    style={{ backgroundColor: cat.color }}
+                  />
+                  {cat.name}
+                  {countByCategory.has(cat.id) && (
+                    <span className="text-[10px] opacity-50">({countByCategory.get(cat.id)})</span>
+                  )}
+                </button>
+                {colorPickerId === cat.id && (
+                  <div className="absolute top-full left-0 mt-2 z-30 bg-[var(--surface-2)] border border-[var(--border-light)] rounded-xl shadow-xl p-3 flex flex-col gap-2 min-w-[180px]">
+                    <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">Couleur — {cat.name}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {COLOR_PALETTE.map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => handleCategoryColorChange(cat.id, c)}
+                          className="w-6 h-6 rounded-full border-2 transition-all hover:scale-110"
+                          style={{
+                            backgroundColor: c,
+                            borderColor: cat.color === c ? "var(--text)" : "transparent",
+                          }}
+                          title={c}
+                        />
+                      ))}
+                    </div>
+                    <div className="border-t border-[var(--border)] pt-2 mt-1 flex flex-col gap-0.5">
+                      <button
+                        onClick={() => handleClearCategory(cat.id)}
+                        className="w-full text-left text-[10px] text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors py-1 px-1 rounded hover:bg-red-900/20"
+                      >
+                        🗑 Vider la catégorie
+                      </button>
+                      <button
+                        onClick={() => handleRemoveCategory(cat.id)}
+                        className="w-full text-left text-[10px] text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors py-1 px-1 rounded hover:bg-red-900/20"
+                      >
+                        ✕ Supprimer la catégorie
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="ml-auto flex items-center gap-3">
           {syncLabel && (

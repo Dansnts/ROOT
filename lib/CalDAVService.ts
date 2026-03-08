@@ -185,33 +185,52 @@ function parseICalToEvents(ical: string, href: string, etag: string): CalDAVEven
     const rangeEnd   = new Date(now.getFullYear() + 2, 11, 31);
     const MAX_OCC    = 730; // ~2 ans hebdo max
 
+    // Durée de l'événement source (en ms) pour calculer dtend des occurrences
+    const srcStart = ev.startDate?.toJSDate();
+    const srcEnd   = ev.endDate?.toJSDate();
+    const durationMs = srcStart && srcEnd ? srcEnd.getTime() - srcStart.getTime() : 0;
+
     const expand = new ICAL.RecurExpansion({ component: vevent, dtstart: ev.startDate });
     const events: CalDAVEvent[] = [];
     let count = 0;
+    let prevStr = ""; // garde contre boucle infinie si next() ne progresse pas
 
     for (let next = expand.next(); next && count < MAX_OCC; next = expand.next()) {
-      const jsDate = next.toJSDate();
+      const jsDate  = next.toJSDate();
+      const dateStr = jsDate.toISOString().split("T")[0];
+
+      // Guard : si la date n'avance plus, on arrête
+      if (dateStr === prevStr) break;
+      prevStr = dateStr;
+
       if (jsDate > rangeEnd) break;
       count++;
       if (jsDate < rangeStart) continue;
 
-      const occurrence = ev.getOccurrenceDetails(next);
-      const dtstart = occurrence.startDate?.toJSDate()?.toISOString().split("T")[0];
-      const dtend   = occurrence.endDate?.toJSDate()?.toISOString().split("T")[0];
-      if (!dtstart) continue;
+      // Calcul de dtend à partir de la durée source (évite getOccurrenceDetails
+      // qui est instable dans certaines versions ical.js browser)
+      const occEnd = durationMs > 0
+        ? new Date(jsDate.getTime() + durationMs).toISOString().split("T")[0]
+        : undefined;
 
       events.push({
-        // UID unique par occurrence pour le stockage IndexedDB
-        uid: `${baseUid}__${dtstart}`,
+        uid: `${baseUid}__${dateStr}`,
         href,
         etag,
-        summary: occurrence.item?.summary ?? summary,
-        dtstart,
-        dtend: dtend && dtend !== dtstart ? dtend : undefined,
+        summary,
+        dtstart: dateStr,
+        dtend: occEnd && occEnd !== dateStr ? occEnd : undefined,
         description,
         location,
         status,
       });
+    }
+
+    // Fallback : si l'expansion n'a rien produit, retourner au moins l'événement de base
+    if (events.length === 0 && srcStart) {
+      const dtstart = srcStart.toISOString().split("T")[0];
+      const dtend   = srcEnd?.toISOString().split("T")[0];
+      return [{ uid: baseUid, href, etag, summary, dtstart, dtend, description, location, status }];
     }
 
     return events;
@@ -393,8 +412,8 @@ export async function syncCalDAV(
   entry: CalendarEntry
 ): Promise<SyncResult> {
   const result: SyncResult = { created: 0, updated: 0, deleted: 0, errors: 0 };
-  const targetPageId = entry.targetPageId;
-  if (!targetPageId) return { ...result, errors: 1, errorMessage: "Page cible non définie pour ce calendrier." };
+  const categoryId = entry.categoryId ?? entry.categoryId;
+  if (!categoryId) return { ...result, errors: 1, errorMessage: "Catégorie non définie pour ce calendrier." };
 
   const blockType = entry.mode === "kanban" ? "task" : "calendar-event";
   const auth = buildBasicAuth(config.username, config.password);
@@ -427,8 +446,8 @@ export async function syncCalDAV(
 
   // Charge une fois tous les blocs de la page cible pour éviter N requêtes DB
   const pageBlocks = await db.blocks
-    .where("pageId").equals(targetPageId)
-    .filter((b) => !b.isDeleted)
+    .where("pageId").equals(categoryId)
+    .filter((b: import("./database").BlockRecord) => !b.isDeleted)
     .toArray();
 
   // Index uid→block pour lookup O(1) (uid = caldavEventId stocké dans les props)
@@ -476,10 +495,10 @@ export async function syncCalDAV(
             result.updated++;
           }
         } else {
-          const order = await db.blocks.where("pageId").equals(targetPageId).count();
+          const order = await db.blocks.where("pageId").equals(categoryId).count();
           const newBlock = {
             id: crypto.randomUUID(),
-            pageId: targetPageId,
+            pageId: categoryId,
             parentBlockId: null as null,
             type: blockType as import("./database").BlockType,
             encryptedContent: await encryptValue(newContent),

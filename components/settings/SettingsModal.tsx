@@ -2,11 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { useCategoriesStore } from "@/stores/categoriesStore";
 import { testCalDAVConnection, discoverCalendars, type DiscoveredCalendar } from "@/lib/CalDAVService";
 import { exportAllPagesAsMarkdown, importMarkdownFile } from "@/lib/ExportService";
 import { usePagesStore } from "@/stores/pagesStore";
 import { useCalendarStore } from "@/stores/calendarStore";
-import { db } from "@/lib/database";
+import Dexie from "dexie";
+import { db, type PageRecord, type BlockRecord, type SettingRecord } from "@/lib/database";
+import { encryptValue, decryptValue } from "@/stores/vaultStore";
 import type { CalDAVConfig, CalendarEntry } from "@/lib/database";
 
 type Tab = "profil" | "caldav" | "export" | "données";
@@ -16,14 +19,13 @@ interface Props { onClose: () => void }
 export default function SettingsModal({ onClose }: Props) {
   const [tab, setTab]     = useState<Tab>("profil");
   const { caldav, userName, loadSettings, saveCalDAV, clearCalDAV, saveUserName } = useSettingsStore();
-  const { pages, activePageId, loadPages } = usePagesStore();
+  const { loadPages } = usePagesStore();
   const { sync } = useCalendarStore();
+  const { categories, createCategory } = useCategoriesStore();
   const fileRef    = useRef<HTMLInputElement>(null);
   const importRef  = useRef<HTMLInputElement>(null);
 
   useEffect(() => { loadSettings(); }, [loadSettings]);
-
-  const availablePages = pages.filter((p) => !p.isDeleted);
 
   return (
     <div
@@ -61,8 +63,8 @@ export default function SettingsModal({ onClose }: Props) {
           {tab === "caldav" && (
             <CalDAVTab
               config={caldav}
-              pages={availablePages}
-              activePageId={activePageId}
+              categories={categories}
+              onCreateCategory={createCategory}
               onSave={saveCalDAV}
               onClear={clearCalDAV}
               onSync={sync}
@@ -123,11 +125,11 @@ function ProfilTab({ userName, onSave }: { userName: string | null; onSave: (n: 
 // ── Onglet CalDAV ─────────────────────────────────────────────────────────────
 
 function CalDAVTab({
-  config, pages, activePageId, onSave, onClear, onSync,
+  config, categories, onCreateCategory, onSave, onClear, onSync,
 }: {
   config: CalDAVConfig | null;
-  pages: { id: string; title: string }[];
-  activePageId: string | null;
+  categories: import("@/lib/database").CalendarCategory[];
+  onCreateCategory: (name: string, color: string) => Promise<import("@/lib/database").CalendarCategory>;
   onSave: (c: CalDAVConfig) => Promise<void>;
   onClear: () => Promise<void>;
   onSync: () => Promise<void>;
@@ -169,7 +171,7 @@ function CalDAVTab({
         displayName: cal.displayName,
         color: cal.color,
         mode: "calendar" as const,
-        targetPageId: undefined,
+        categoryId: undefined,
       }));
       setDiscovered2(true);
     }
@@ -240,7 +242,8 @@ function CalDAVTab({
             <CalendarEntryRow
               key={entry.url}
               entry={entry}
-              pages={pages}
+              categories={categories}
+              onCreateCategory={onCreateCategory}
               onChange={(patch) => updateEntry(i, patch)}
             />
           ))}
@@ -271,24 +274,31 @@ function CalDAVTab({
 // ── Ligne de configuration d'un calendrier ────────────────────────────────────
 
 function CalendarEntryRow({
-  entry, pages, onChange,
+  entry, categories, onCreateCategory, onChange,
 }: {
   entry: CalendarEntry;
-  pages: { id: string; title: string }[];
+  categories: import("@/lib/database").CalendarCategory[];
+  onCreateCategory: (name: string, color: string) => Promise<import("@/lib/database").CalendarCategory>;
   onChange: (patch: Partial<CalendarEntry>) => void;
 }) {
+  const [creating, setCreating] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+
+  async function handleCreateAndAssign() {
+    if (!newCatName.trim()) return;
+    const cat = await onCreateCategory(newCatName.trim(), entry.color ?? "#5b6a7a");
+    onChange({ categoryId: cat.id });
+    setCreating(false);
+    setNewCatName("");
+  }
+
   return (
     <div className="flex flex-col gap-2 p-3 bg-[var(--surface-3)] border border-[var(--border)] rounded-xl">
       <div className="flex items-center gap-2">
         {entry.color && (
-          <span
-            className="w-3 h-3 rounded-full shrink-0"
-            style={{ backgroundColor: entry.color }}
-          />
+          <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
         )}
         <span className="text-sm text-[var(--text)] truncate flex-1">{entry.displayName}</span>
-
-        {/* Mode selector */}
         <select
           value={entry.mode}
           onChange={(e) => onChange({ mode: e.target.value as "calendar" | "kanban" })}
@@ -299,18 +309,39 @@ function CalendarEntryRow({
         </select>
       </div>
 
-      {/* Target page selector */}
+      {/* Catégorie cible */}
       <div className="flex items-center gap-2">
-        <label className="text-xs text-[var(--text-faint)] shrink-0">Page cible :</label>
+        <label className="text-xs text-[var(--text-faint)] shrink-0">Catégorie :</label>
         <select
-          value={entry.targetPageId ?? ""}
-          onChange={(e) => onChange({ targetPageId: e.target.value || undefined })}
+          value={entry.categoryId ?? ""}
+          onChange={(e) => {
+            if (e.target.value === "__new__") { setCreating(true); }
+            else { onChange({ categoryId: e.target.value || undefined }); }
+          }}
           className="flex-1 text-xs bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2 py-1 text-[var(--text-muted)] outline-none"
         >
-          <option value="">— Choisir une page —</option>
-          {pages.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+          <option value="">— Choisir une catégorie —</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+          <option value="__new__">+ Nouvelle catégorie…</option>
         </select>
       </div>
+
+      {creating && (
+        <div className="flex gap-2">
+          <input
+            autoFocus
+            value={newCatName}
+            onChange={(e) => setNewCatName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleCreateAndAssign(); if (e.key === "Escape") setCreating(false); }}
+            placeholder="Nom de la nouvelle catégorie"
+            className="flex-1 text-xs bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2 py-1 text-[var(--text)] outline-none focus:border-[var(--accent)]"
+          />
+          <button onClick={handleCreateAndAssign} className="text-xs px-2 py-1 rounded-lg bg-[var(--surface-2)] border border-[var(--border-light)] text-[var(--accent)] hover:border-[var(--accent)]">OK</button>
+          <button onClick={() => setCreating(false)} className="text-xs text-[var(--text-faint)]">✕</button>
+        </div>
+      )}
 
       <p className="text-[10px] text-[var(--text-faint)] truncate">{entry.url}</p>
     </div>
@@ -387,12 +418,35 @@ function DataTab({ onClose, importRef }: {
   async function handleExport() {
     setBusy(true);
     try {
-      const [pages, blocks, settings] = await Promise.all([
+      const [pageRecs, blockRecs, settingRecs] = await Promise.all([
         db.pages.toArray(),
         db.blocks.toArray(),
         db.settings.toArray(),
       ]);
-      const backup = { version: 1, exportedAt: Date.now(), pages, blocks, settings };
+
+      // Déchiffrer tout — le backup est portable entre vaults (mots de passe différents)
+      const pages = await Promise.all(pageRecs.map(async (p: PageRecord) => ({
+        id: p.id, parentId: p.parentId, order: p.order,
+        createdAt: p.createdAt, updatedAt: p.updatedAt,
+        isDeleted: p.isDeleted, isFolder: p.isFolder,
+        title: await decryptValue<string>(p.encryptedTitle),
+        icon:  p.encryptedIcon ? await decryptValue<string>(p.encryptedIcon) : undefined,
+      })));
+
+      const blocks = await Promise.all(blockRecs.map(async (b: BlockRecord) => ({
+        id: b.id, pageId: b.pageId, parentBlockId: b.parentBlockId,
+        type: b.type, order: b.order,
+        createdAt: b.createdAt, updatedAt: b.updatedAt, isDeleted: b.isDeleted,
+        content:    await decryptValue<Record<string, unknown>>(b.encryptedContent),
+        properties: await decryptValue<Record<string, unknown>>(b.encryptedProperties),
+      })));
+
+      const settings = await Promise.all(settingRecs.map(async (s: SettingRecord) => ({
+        key: s.key, updatedAt: s.updatedAt,
+        value: await decryptValue<unknown>(s.encryptedValue),
+      })));
+
+      const backup = { version: 2, exportedAt: Date.now(), pages, blocks, settings };
       const blob = new Blob([JSON.stringify(backup)], { type: "application/json" });
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement("a");
@@ -414,18 +468,53 @@ function DataTab({ onClose, importRef }: {
     try {
       const text   = await file.text();
       const backup = JSON.parse(text);
-      if (backup.version !== 1 || !Array.isArray(backup.pages) || !Array.isArray(backup.blocks)) {
-        setStatus("Fichier invalide — ce n'est pas un backup ROOT.");
+      if (backup.version !== 2 || !Array.isArray(backup.pages) || !Array.isArray(backup.blocks)) {
+        setStatus("Fichier invalide ou format incompatible (backup v1 non supporté).");
         return;
       }
-      await db.transaction("rw", db.pages, db.blocks, db.settings, async () => {
+
+      // Ré-chiffrer avec la clé du vault courant
+      const pageRecs = await Promise.all(backup.pages.map(async (p: {
+        id: string; parentId: string | null; order: number;
+        createdAt: number; updatedAt: number; isDeleted: boolean; isFolder?: boolean;
+        title: string; icon?: string;
+      }) => ({
+        id: p.id, parentId: p.parentId, order: p.order,
+        createdAt: p.createdAt, updatedAt: p.updatedAt,
+        isDeleted: p.isDeleted, ...(p.isFolder ? { isFolder: true } : {}),
+        encryptedTitle: await encryptValue(p.title),
+        ...(p.icon ? { encryptedIcon: await encryptValue(p.icon) } : {}),
+      })));
+
+      const blockRecs = await Promise.all(backup.blocks.map(async (b: {
+        id: string; pageId: string; parentBlockId: string | null;
+        type: string; order: number; createdAt: number; updatedAt: number; isDeleted: boolean;
+        content: Record<string, unknown>; properties: Record<string, unknown>;
+      }) => ({
+        id: b.id, pageId: b.pageId, parentBlockId: b.parentBlockId,
+        type: b.type, order: b.order,
+        createdAt: b.createdAt, updatedAt: b.updatedAt, isDeleted: b.isDeleted,
+        encryptedContent:    await encryptValue(b.content),
+        encryptedProperties: await encryptValue(b.properties),
+      })));
+
+      const settingRecs = await Promise.all((backup.settings ?? []).map(async (s: {
+        key: string; updatedAt: number; value: unknown;
+      }) => ({
+        key: s.key, updatedAt: s.updatedAt,
+        encryptedValue: await encryptValue(s.value),
+      })));
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (db as unknown as Dexie).transaction("rw", db.pages as any, db.blocks as any, db.settings as any, async () => {
         await db.pages.clear();
         await db.blocks.clear();
         await db.settings.clear();
-        if (backup.pages.length)    await db.pages.bulkAdd(backup.pages);
-        if (backup.blocks.length)   await db.blocks.bulkAdd(backup.blocks);
-        if (backup.settings?.length) await db.settings.bulkAdd(backup.settings);
+        if (pageRecs.length)    await db.pages.bulkAdd(pageRecs as never);
+        if (blockRecs.length)   await db.blocks.bulkAdd(blockRecs as never);
+        if (settingRecs.length) await db.settings.bulkAdd(settingRecs as never);
       });
+
       setStatus("Import terminé — rechargement…");
       setTimeout(() => window.location.reload(), 800);
     } catch {
@@ -440,7 +529,7 @@ function DataTab({ onClose, importRef }: {
     if (nukeText !== "NUKE") return;
     setBusy(true);
     try {
-      await db.delete();
+      await (db as unknown as Dexie).delete();
       localStorage.clear();
       window.location.reload();
     } catch {
@@ -456,8 +545,8 @@ function DataTab({ onClose, importRef }: {
       <div className="flex flex-col gap-2">
         <h3 className="text-sm font-medium text-[var(--text)]">Sauvegarder</h3>
         <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-          Exporte toutes vos données (pages, blocs, paramètres) dans un fichier JSON.
-          Les données restent chiffrées — vous avez besoin de votre Master Password pour les relire.
+          Exporte toutes vos données déchiffrées dans un fichier JSON portable.
+          Ce backup peut être importé par n&apos;importe quel vault, quel que soit le Master Password.
         </p>
         <button onClick={handleExport} disabled={busy} className={btnCls}>
           ↓ Télécharger le backup (.json)
@@ -470,8 +559,8 @@ function DataTab({ onClose, importRef }: {
       <div className="flex flex-col gap-2">
         <h3 className="text-sm font-medium text-[var(--text)]">Restaurer</h3>
         <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-          Importe un backup ROOT (.json). Les données actuelles seront remplacées.
-          Le vault doit avoir le même Master Password que lors de l&apos;export.
+          Importe un backup ROOT (.json). Les données actuelles seront remplacées
+          et ré-chiffrées avec le Master Password de ce vault.
         </p>
         <input
           ref={importRef}

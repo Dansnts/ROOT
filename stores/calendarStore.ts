@@ -3,7 +3,6 @@
 import { create } from "zustand";
 import { db } from "@/lib/database";
 import { encryptValue, decryptValue } from "@/stores/vaultStore";
-import { loadAllPages } from "@/lib/BlockService";
 import {
   pushEventToCalDAV,
   deleteEventFromCalDAV,
@@ -12,6 +11,7 @@ import {
   type CalDAVBlockProps,
 } from "@/lib/CalDAVService";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { useCategoriesStore } from "@/stores/categoriesStore";
 import type { CalendarEntry } from "@/lib/database";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -24,8 +24,8 @@ export interface StoreEvent {
   end?: string;
   description?: string;
   location?: string;
-  pageId: string;
-  pageTitle: string;
+  categoryId: string;
+  categoryName: string;
   caldavUrl?: string;
   caldavEtag?: string;
   color: string;
@@ -40,12 +40,13 @@ interface CalendarState {
   lastSyncAt: number | null;
   lastSyncError: string | null;
 
-  // Actions
   loadEvents: () => Promise<void>;
   sync: () => Promise<void>;
-  createEvent: (data: EventFormData, pageId: string, calendarEntry?: CalendarEntry) => Promise<void>;
+  createEvent: (data: EventFormData, categoryId: string, calendarEntry?: CalendarEntry) => Promise<void>;
   updateEvent: (blockId: string, data: Partial<EventFormData>) => Promise<void>;
   deleteEvent: (blockId: string) => Promise<void>;
+  deleteCalendarEvents: (categoryId: string) => Promise<void>;
+  moveEventToCategory: (blockId: string, newCategoryId: string) => Promise<void>;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -57,7 +58,7 @@ function extractText(node: Record<string, unknown>): string {
   return "";
 }
 
-function statusColor(caldavStatus?: string): string {
+function fallbackColor(caldavStatus?: string): string {
   if (caldavStatus === "COMPLETED") return "#3d8a5c";
   if (caldavStatus === "CANCELLED") return "#6b3333";
   return "#5b6a7a";
@@ -73,10 +74,9 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
 
   // ── Charger tous les événements depuis IndexedDB ───────────────────────────
   loadEvents: async () => {
-    const pages = await loadAllPages();
-    const pageMap = new Map(pages.map((p) => [p.id, p.title]));
+    const categories = useCategoriesStore.getState().categories;
+    const catById = new Map(categories.map((c) => [c.id, c]));
 
-    // Load both task and calendar-event block types with a dueDate
     const allBlocks = await db.blocks.filter((b) => !b.isDeleted).toArray();
     const events: StoreEvent[] = [];
 
@@ -89,6 +89,10 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
         const content = await decryptValue<Record<string, unknown>>(block.encryptedContent);
         const title = extractText(content) || "Sans titre";
 
+        const cat = catById.get(block.pageId);
+        const color = cat?.color ?? fallbackColor(props.status);
+        const categoryName = cat?.name ?? "—";
+
         events.push({
           id: block.id,
           uid: props.caldavEventId ?? block.id,
@@ -97,11 +101,11 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
           end: props.endDate,
           description: props.description,
           location: props.location,
-          pageId: block.pageId,
-          pageTitle: pageMap.get(block.pageId) ?? "—",
+          categoryId: block.pageId,
+          categoryName,
           caldavUrl: props.caldavUrl,
           caldavEtag: props.caldavEtag,
-          color: statusColor(props.status),
+          color,
           synced: !!props.caldavEventId,
         });
       } catch { /* bloc inaccessible */ }
@@ -122,30 +126,26 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
 
     set({ syncStatus: "syncing" });
     try {
-      let hasError = false;
-      const errors: string[] = [];
-
-      const calendarsToSync = caldav.calendars.filter((e) => !!e.targetPageId);
+      const calendarsToSync = caldav.calendars.filter((e) => !!e.categoryId);
       if (calendarsToSync.length === 0) {
         set({
           syncStatus: "error",
-          lastSyncError:
-            "Aucun calendrier n'a de page cible. Dans Paramètres → CalDAV, assignez une page à chaque calendrier puis sauvegardez.",
+          lastSyncError: "Aucun calendrier n'a de catégorie. Assignez une catégorie dans Paramètres → CalDAV.",
         });
         return;
       }
 
+      const errors: string[] = [];
       for (const entry of calendarsToSync) {
         const result = await syncCalDAV(caldav, entry);
         if (result.errorMessage) {
-          hasError = true;
           errors.push(`${entry.displayName}: ${result.errorMessage}`);
         }
       }
 
       await get().loadEvents();
 
-      if (hasError) {
+      if (errors.length > 0) {
         set({ syncStatus: "error", lastSyncError: errors.join("\n") });
       } else {
         set({ syncStatus: "success", lastSyncAt: Date.now(), lastSyncError: null });
@@ -157,14 +157,13 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
   },
 
   // ── Créer un événement local + push CalDAV ────────────────────────────────
-  createEvent: async (data, pageId, calendarEntry?) => {
+  createEvent: async (data, categoryId, calendarEntry?) => {
     const uid = data.uid ?? crypto.randomUUID();
     const now = Date.now();
     const blockType = calendarEntry?.mode === "kanban" ? "task" : "calendar-event";
 
     const content = { type: "paragraph", content: [{ type: "text", text: data.summary }] };
 
-    // Tentative push CalDAV si un calendrier cible est fourni
     const caldav = useSettingsStore.getState().caldav;
     let caldavUrl: string | undefined;
     let caldavEtag: string | undefined;
@@ -193,10 +192,10 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
       caldavEtag,
     };
 
-    const count = await db.blocks.where("pageId").equals(pageId).count();
+    const count = await db.blocks.where("pageId").equals(categoryId).count();
     await db.blocks.add({
       id: crypto.randomUUID(),
-      pageId,
+      pageId: categoryId,
       parentBlockId: null,
       type: blockType,
       encryptedContent: await encryptValue(content),
@@ -230,7 +229,6 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
       location: data.location ?? oldProps.location,
     };
 
-    // Push CalDAV si l'événement est synchronisé
     const caldav = useSettingsStore.getState().caldav;
     if (caldav && oldProps.caldavEventId) {
       const pushResult = await pushEventToCalDAV(caldav, {
@@ -257,6 +255,32 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
     await get().loadEvents();
   },
 
+  // ── Supprimer tous les événements d'une catégorie ─────────────────────────
+  deleteCalendarEvents: async (categoryId) => {
+    const blocks = await db.blocks
+      .where("pageId").equals(categoryId)
+      .filter((b) => !b.isDeleted && (b.type === "calendar-event" || b.type === "task"))
+      .toArray();
+
+    const caldav = useSettingsStore.getState().caldav;
+    for (const block of blocks) {
+      try {
+        const props = await decryptValue<CalDAVBlockProps>(block.encryptedProperties);
+        if (caldav && props.caldavUrl) {
+          await deleteEventFromCalDAV(caldav, props.caldavUrl, props.caldavEtag);
+        }
+        await db.blocks.update(block.id, { isDeleted: true, updatedAt: Date.now() });
+      } catch { /* skip */ }
+    }
+    await get().loadEvents();
+  },
+
+  // ── Déplacer un événement vers une autre catégorie ────────────────────────
+  moveEventToCategory: async (blockId, newCategoryId) => {
+    await db.blocks.update(blockId, { pageId: newCategoryId, updatedAt: Date.now() });
+    await get().loadEvents();
+  },
+
   // ── Supprimer un événement local + DELETE CalDAV ──────────────────────────
   deleteEvent: async (blockId) => {
     const block = await db.blocks.get(blockId);
@@ -264,7 +288,6 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
 
     const props = await decryptValue<CalDAVBlockProps>(block.encryptedProperties);
 
-    // Supprimer sur CalDAV si synchronisé
     const caldav = useSettingsStore.getState().caldav;
     if (caldav && props.caldavUrl) {
       await deleteEventFromCalDAV(caldav, props.caldavUrl, props.caldavEtag);

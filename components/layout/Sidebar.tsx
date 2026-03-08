@@ -17,6 +17,10 @@ import {
 } from "@dnd-kit/core";
 import { usePagesStore } from "@/stores/pagesStore";
 import { useVaultStore } from "@/stores/vaultStore";
+import { useTagsStore } from "@/stores/tagsStore";
+import { useCategoriesStore } from "@/stores/categoriesStore";
+import { useCalendarStore } from "@/stores/calendarStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { useTheme } from "@/hooks/useTheme";
 import { type DecryptedPage } from "@/lib/BlockService";
 import type { AppView } from "@/components/layout/AppShell";
@@ -28,6 +32,7 @@ const NAV_ITEMS: { id: AppView; label: string; Icon: React.FC<{ size?: number }>
   { id: "notes",    label: "Notes",      Icon: NotesIcon    },
   { id: "kanban",   label: "Kanban",     Icon: KanbanIcon   },
   { id: "calendar", label: "Calendrier", Icon: CalendarIcon },
+  { id: "tags",     label: "Tags",       Icon: TagsIcon     },
 ];
 
 interface SidebarProps {
@@ -49,7 +54,10 @@ function isDescendantOf(targetId: string, ancestorId: string, pages: DecryptedPa
 export default function Sidebar({ view, onViewChange }: SidebarProps) {
   const { pages, activePageId, newPage, newFolder, setActivePage, movePage, lock } = usePagesStore();
   const { lock: lockVault } = useVaultStore();
+  const { lock: lockTags } = useTagsStore();
+  const { lock: lockCategories } = useCategoriesStore();
   const { theme, toggle: toggleTheme } = useTheme();
+
   const [showSettings, setShowSettings] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropPos, setDropPos] = useState<{ id: string; pos: "before" | "after" | "into" } | null>(null);
@@ -64,7 +72,7 @@ export default function Sidebar({ view, onViewChange }: SidebarProps) {
 
   const draggedPage = dragId ? pages.find((p) => p.id === dragId) : null;
 
-  function handleLock() { lockVault(); lock(); }
+  function handleLock() { lockVault(); lock(); lockTags(); lockCategories(); }
 
   function handleDragStart({ active }: DragStartEvent) {
     setDragId(String(active.id));
@@ -120,7 +128,7 @@ export default function Sidebar({ view, onViewChange }: SidebarProps) {
   return (
     <>
     {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
-    <aside className="flex flex-col w-60 min-w-[360px] h-screen bg-[var(--surface)] border-r border-[var(--border)] select-none shrink-0">
+    <aside className="flex flex-col w-[360px] h-screen bg-[var(--surface)] border-r border-[var(--border)] select-none shrink-0">
 
       {/* Header — Logo + nom */}
       <div className="flex items-center gap-2.5 px-4 py-4 border-b border-[var(--border)]">
@@ -235,7 +243,25 @@ export default function Sidebar({ view, onViewChange }: SidebarProps) {
         </>
       )}
 
-      {view !== "notes" && <div className="flex-1" />}
+      {/* Catégories (vue Calendrier) */}
+      {view === "calendar" && <CategoriesPanel />}
+
+      {view !== "notes" && view !== "calendar" && <div className="flex-1" />}
+
+      {/* Corbeille — toujours en bas */}
+      <div className="px-2 py-1 border-t border-[var(--border)]">
+        <button
+          onClick={() => onViewChange("trash")}
+          className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors w-full text-left ${
+            view === "trash"
+              ? "bg-[var(--surface-3)] text-[var(--danger)]"
+              : "text-[var(--text-faint)] hover:bg-[var(--surface-2)] hover:text-[var(--text-muted)]"
+          }`}
+        >
+          <TrashIcon size={15} />
+          Corbeille
+        </button>
+      </div>
 
       {/* Footer — version */}
       <div className="px-4 py-2 border-t border-[var(--border)]">
@@ -393,6 +419,180 @@ function PageNode({
   );
 }
 
+// ── Panneau Catégories de calendrier ──────────────────────────────────────────
+
+const CAT_COLORS = [
+  "#ef4444","#f97316","#f59e0b","#84cc16",
+  "#22c55e","#14b8a6","#06b6d4","#3b82f6",
+  "#8b5cf6","#ec4899","#6b7280","#a16207",
+];
+
+function CategoriesPanel() {
+  const { categories, createCategory, updateCategory, deleteCategory } = useCategoriesStore();
+  const { events } = useCalendarStore();
+
+  const [creating, setCreating] = useState(false);
+  const [newName,  setNewName]  = useState("");
+  const [newColor, setNewColor] = useState(CAT_COLORS[0]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName,  setEditName]  = useState("");
+
+  const countById = new Map<string, number>();
+  for (const ev of events) {
+    countById.set(ev.categoryId, (countById.get(ev.categoryId) ?? 0) + 1);
+  }
+
+  async function handleCreate() {
+    if (!newName.trim()) return;
+    await createCategory(newName.trim(), newColor);
+    setNewName(""); setNewColor(CAT_COLORS[0]); setCreating(false);
+  }
+
+  async function handleRename(id: string) {
+    if (editName.trim()) await updateCategory(id, { name: editName.trim() });
+    setEditingId(null);
+  }
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-[var(--border)]">
+        <span className="text-[10px] uppercase tracking-widest text-[var(--text-faint)] flex-1">Catégories</span>
+        <button
+          onClick={() => { setCreating((v) => !v); setNewName(""); }}
+          className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors"
+          title="Nouvelle catégorie"
+        >+</button>
+      </div>
+
+      {/* Formulaire création */}
+      {creating && (
+        <div className="px-3 py-2 border-b border-[var(--border)] flex flex-col gap-2 bg-[var(--surface-2)]">
+          <input
+            autoFocus
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); if (e.key === "Escape") setCreating(false); }}
+            placeholder="Nom de la catégorie"
+            className="w-full bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-2 py-1 text-sm text-[var(--text)] outline-none focus:border-[var(--accent)]"
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {CAT_COLORS.map((c) => (
+              <button
+                key={c}
+                onClick={() => setNewColor(c)}
+                className="w-5 h-5 rounded-full border-2 transition-all"
+                style={{ backgroundColor: c, borderColor: newColor === c ? "var(--text)" : "transparent" }}
+              />
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleCreate} className="flex-1 text-xs py-1 rounded-lg bg-[var(--surface-3)] border border-[var(--border-light)] text-[var(--text)] hover:border-[var(--accent)] transition-colors">
+              Créer
+            </button>
+            <button onClick={() => setCreating(false)} className="text-xs py-1 px-2 text-[var(--text-faint)] hover:text-[var(--text-muted)]">
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Liste des catégories */}
+      <nav className="flex-1 overflow-y-auto py-1">
+        {categories.length === 0 && (
+          <p className="px-4 py-3 text-xs text-[var(--text-faint)]">
+            Aucune catégorie. Cliquez + pour en créer une.
+          </p>
+        )}
+        {categories.map((cat) => (
+          <div key={cat.id} className="group flex items-center gap-2 px-3 py-1.5 mx-1 rounded-md hover:bg-[var(--surface-2)] transition-colors">
+            {/* Point couleur cliquable */}
+            <ColorDot
+              color={cat.color}
+              onChange={(c) => updateCategory(cat.id, { color: c })}
+            />
+
+            {/* Nom (éditable en double-clic) */}
+            {editingId === cat.id ? (
+              <input
+                autoFocus
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onBlur={() => handleRename(cat.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleRename(cat.id);
+                  if (e.key === "Escape") setEditingId(null);
+                }}
+                className="flex-1 bg-transparent outline-none text-sm text-[var(--text)] border-b border-[var(--accent)]"
+              />
+            ) : (
+              <span
+                className="flex-1 text-sm text-[var(--text-muted)] truncate cursor-default"
+                onDoubleClick={() => { setEditingId(cat.id); setEditName(cat.name); }}
+              >
+                {cat.name}
+              </span>
+            )}
+
+            {/* Compteur */}
+            {countById.has(cat.id) && (
+              <span className="text-[10px] text-[var(--text-faint)] shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                {countById.get(cat.id)}
+              </span>
+            )}
+
+            {/* Actions */}
+            <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+              <button
+                onClick={() => { setEditingId(cat.id); setEditName(cat.name); }}
+                className="w-5 h-5 flex items-center justify-center text-xs text-[var(--text-faint)] hover:text-[var(--accent)] rounded"
+                title="Renommer"
+              >✎</button>
+              <button
+                onClick={() => {
+                  if (confirm(`Supprimer la catégorie "${cat.name}" ?`))
+                    deleteCategory(cat.id);
+                }}
+                className="w-5 h-5 flex items-center justify-center text-xs text-[var(--text-faint)] hover:text-[var(--danger)] rounded"
+                title="Supprimer"
+              >✕</button>
+            </div>
+          </div>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
+function ColorDot({ color, onChange }: { color: string; onChange: (c: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative shrink-0">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-3 h-3 rounded-full ring-2 ring-transparent hover:ring-[var(--border-light)] transition-all"
+        style={{ backgroundColor: color }}
+        title="Changer la couleur"
+      />
+      {open && (
+        <div
+          className="absolute top-full left-0 mt-1 z-30 bg-[var(--surface-2)] border border-[var(--border-light)] rounded-xl shadow-xl p-2 flex flex-wrap gap-1.5"
+          style={{ minWidth: 120 }}
+          onMouseLeave={() => setOpen(false)}
+        >
+          {CAT_COLORS.map((c) => (
+            <button
+              key={c}
+              onClick={() => { onChange(c); setOpen(false); }}
+              className="w-5 h-5 rounded-full border-2 transition-all hover:scale-110"
+              style={{ backgroundColor: c, borderColor: color === c ? "var(--text)" : "transparent" }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ActionBtn({ title, onClick, children }: {
   title: string;
   onClick: React.MouseEventHandler;
@@ -504,6 +704,29 @@ function MoonIcon() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  );
+}
+
+function TagsIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+      <circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none"/>
+    </svg>
+  );
+}
+
+function TrashIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="3 6 5 6 21 6"/>
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+      <path d="M10 11v6"/>
+      <path d="M14 11v6"/>
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
     </svg>
   );
 }

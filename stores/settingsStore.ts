@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { db } from "@/lib/database";
 import { encryptValue, decryptValue } from "@/stores/vaultStore";
-import type { CalDAVConfig } from "@/lib/database";
+import type { CalDAVConfig, CalendarCategory } from "@/lib/database";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -52,12 +52,53 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
               url: raw.serverUrl,
               displayName: "Calendrier",
               mode: "calendar",
-              targetPageId: raw.calendarPath,
+              categoryId: raw.calendarPath,
             }],
           };
         } else {
           caldav = { ...raw, calendars: raw?.calendars ?? [] };
         }
+      }
+
+      // ── Migration : targetPageId → categoryId ────────────────────────────
+      if (caldav?.calendars?.some((c) => c.targetPageId && !c.categoryId)) {
+        const catRow = await db.settings.get("calendar_categories");
+        const existingCats: CalendarCategory[] = catRow
+          ? (await decryptValue<CalendarCategory[]>(catRow.encryptedValue) ?? [])
+          : [];
+        const catMap = new Map(existingCats.map((c) => [c.id, c]));
+        const newCats = [...existingCats];
+        caldav = {
+          ...caldav,
+          calendars: caldav.calendars.map((entry) => {
+            if (entry.targetPageId && !entry.categoryId) {
+              if (!catMap.has(entry.targetPageId)) {
+                const cat: CalendarCategory = {
+                  id: entry.targetPageId,
+                  name: entry.displayName,
+                  color: entry.color ?? "#5b6a7a",
+                };
+                newCats.push(cat);
+                catMap.set(cat.id, cat);
+              }
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              const { targetPageId: _, ...rest } = entry;
+              return { ...rest, categoryId: entry.targetPageId };
+            }
+            return entry;
+          }),
+        };
+        // Persist migrated data
+        await db.settings.put({
+          key: "calendar_categories",
+          encryptedValue: await encryptValue(newCats),
+          updatedAt: Date.now(),
+        });
+        await db.settings.put({
+          key: "caldav_config",
+          encryptedValue: await encryptValue(caldav),
+          updatedAt: Date.now(),
+        });
       }
 
       let userName: string | null = null;

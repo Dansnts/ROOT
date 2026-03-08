@@ -13,7 +13,42 @@
  *    les données si le schéma change.
  */
 
-import Dexie, { type Table } from "dexie";
+import _DexieImport from "dexie";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const Dexie = _DexieImport as any as { new(name: string): { version(n: number): { stores(s: Record<string, string>): void }; open(): Promise<void> }; semVer: string };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+interface Table<T = any, K = any> {
+  get(key: K): Promise<T | undefined>;
+  put(item: T): Promise<K>;
+  add(item: T): Promise<K>;
+  update(key: K, changes: Partial<T>): Promise<number>;
+  delete(key: K): Promise<void>;
+  toArray(): Promise<T[]>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  filter(fn: (item: T) => boolean): QueryChain<T, K>;
+  where(index: string): WhereClause<T, K>;
+  bulkAdd(items: T[]): Promise<K>;
+  bulkPut(items: T[]): Promise<K>;
+  clear(): Promise<void>;
+  count(): Promise<number>;
+}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+interface WhereClause<T = any, K = any> {
+  equals(val: K | string | number): QueryChain<T, K>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  between(lower: any, upper: any): QueryChain<T, K>;
+  anyOf(keys: (K | string | number)[]): QueryChain<T, K>;
+}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+interface QueryChain<T = any, K = any> {
+  toArray(): Promise<T[]>;
+  filter(fn: (item: T) => boolean): QueryChain<T, K>;
+  count(): Promise<number>;
+  modify(changes: Partial<T> | ((item: T) => void)): Promise<number>;
+  delete(): Promise<number>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  primaryKeys(): Promise<any[]>;
+}
 import type { EncryptedPayload } from "./VaultService";
 
 // ── Énumérations ──────────────────────────────────────────────────────────────
@@ -216,6 +251,17 @@ export interface TaskProperties {
 }
 
 /**
+ * Catégorie de calendrier (anciennement liée à une page ROOT).
+ * Stockée dans settings["calendar_categories"].
+ */
+export interface CalendarCategory {
+  id: string;
+  name: string;
+  /** Couleur hex (#RRGGBB) */
+  color: string;
+}
+
+/**
  * Un calendrier CalDAV configuré, avec son mode d'affichage dans ROOT.
  */
 export interface CalendarEntry {
@@ -231,7 +277,9 @@ export interface CalendarEntry {
    *   "kanban"   → les événements vont dans le Kanban (blocs task)
    */
   mode: "calendar" | "kanban";
-  /** Page ROOT cible pour stocker les événements importés (UUID) */
+  /** Catégorie cible (UUID) — remplace targetPageId */
+  categoryId?: string;
+  /** @deprecated Utiliser categoryId. Conservé pour migration automatique. */
   targetPageId?: string;
 }
 
