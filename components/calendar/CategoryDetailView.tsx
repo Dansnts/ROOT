@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useCalendarStore, type StoreEvent, UNCATEGORIZED_ID } from "@/stores/calendarStore";
 import { useCategoriesStore } from "@/stores/categoriesStore";
+import { KANBAN_PAGE_ID } from "@/lib/constants";
 
 interface Props {
   categoryId: string;
@@ -17,9 +18,11 @@ export default function CategoryDetailView({ categoryId, onBack }: Props) {
   useEffect(() => { loadEvents(); }, [loadEvents]);
 
   const isUncategorized = categoryId === UNCATEGORIZED_ID;
-  const category = isUncategorized
-    ? { id: UNCATEGORIZED_ID, name: "Sans catégorie", color: "#6b7280" }
-    : categories.find((c) => c.id === categoryId);
+  const isKanban        = categoryId === KANBAN_PAGE_ID;
+  const category =
+    isUncategorized ? { id: UNCATEGORIZED_ID, name: "Sans catégorie", color: "#6b7280" } :
+    isKanban        ? { id: KANBAN_PAGE_ID,    name: "Kanban",          color: "#5b6a7a" } :
+    categories.find((c) => c.id === categoryId);
   const catEvents = events
     .filter((e) => e.categoryId === categoryId)
     .sort((a, b) => a.start.localeCompare(b.start));
@@ -166,8 +169,7 @@ export default function CategoryDetailView({ categoryId, onBack }: Props) {
                         {/* Supprimer */}
                         <button
                           onClick={async () => {
-                            if (isUncategorized) {
-                              // Local uniquement — pas de push serveur pour les non-assignés
+                            if (isUncategorized || isKanban) {
                               await deleteEventLocal(ev.id);
                             } else {
                               if (confirm(`Supprimer "${ev.title}" ?`)) await deleteEvent(ev.id);
