@@ -164,38 +164,37 @@ export async function savePageDocument(
     .toArray();
   existing.sort((a: BlockRecord, b: BlockRecord) => a.order - b.order);
 
+  // ── Tout le chiffrement se fait AVANT d'ouvrir la transaction ────────────────
+  // IndexedDB auto-commit une transaction dès qu'il n'y a plus de requête DB
+  // en attente : un `await` crypto à l'intérieur fermerait la transaction trop tôt.
+  const upserts: BlockRecord[] = await Promise.all(
+    nodes.map(async (node, i) => {
+      const prev = existing[i];
+      const nodeType = (node.type as string) ?? "paragraph";
+      return {
+        id: prev?.id ?? crypto.randomUUID(),
+        pageId,
+        parentBlockId: null,
+        type: tiptapTypeToBlockType(nodeType),
+        encryptedContent: await encryptValue(node),
+        encryptedProperties: await encryptValue({}),
+        order: i,
+        createdAt: prev?.createdAt ?? now,
+        updatedAt: now,
+        isDeleted: false,
+      } satisfies BlockRecord;
+    })
+  );
+
+  const toDeleteIds = existing.slice(nodes.length).map((b: BlockRecord) => b.id);
+
+  // ── Écriture atomique : uniquement des opérations IndexedDB ──────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (db as unknown as Dexie).transaction("rw", db.pages as any, db.blocks as any, async () => {
-    // Supprimer les blocs en surplus (si le doc a raccourci)
-    if (existing.length > nodes.length) {
-      const toDelete = existing.slice(nodes.length).map((b: BlockRecord) => b.id);
-      await db.blocks.where("id").anyOf(toDelete).modify({ isDeleted: true, updatedAt: now });
+    if (toDeleteIds.length > 0) {
+      await db.blocks.where("id").anyOf(toDeleteIds).modify({ isDeleted: true, updatedAt: now });
     }
-
-    // Upsert chaque nœud TipTap comme bloc
-    const upserts: BlockRecord[] = await Promise.all(
-      nodes.map(async (node, i) => {
-        const prev = existing[i];
-        const nodeType = (node.type as string) ?? "paragraph";
-
-        return {
-          id: prev?.id ?? crypto.randomUUID(),
-          pageId,
-          parentBlockId: null,
-          type: tiptapTypeToBlockType(nodeType),
-          encryptedContent: await encryptValue(node),
-          encryptedProperties: await encryptValue({}),
-          order: i,
-          createdAt: prev?.createdAt ?? now,
-          updatedAt: now,
-          isDeleted: false,
-        } satisfies BlockRecord;
-      })
-    );
-
     await db.blocks.bulkPut(upserts);
-
-    // Mettre à jour updatedAt de la page
     await db.pages.update(pageId, { updatedAt: now });
   });
 }

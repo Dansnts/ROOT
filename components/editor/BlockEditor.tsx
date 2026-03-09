@@ -146,7 +146,11 @@ export default function BlockEditor({ pageId }: Props) {
       .catch(console.error);
 
     return () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+        savePageDocument(currentPageId.current, editor.getJSON()).catch(console.error);
+      }
     };
   }, [pageId, editor, isUnlocked]);
 

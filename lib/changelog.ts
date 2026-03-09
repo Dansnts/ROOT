@@ -1,0 +1,51 @@
+/**
+ * changelog.ts
+ *
+ * Source unique de vérité pour le numéro de version et l'historique des
+ * modifications. Pour publier une nouvelle version :
+ *   1. Ajouter une entrée en tête du tableau RELEASES
+ *   2. Mettre à jour APP_VERSION
+ *   3. Mettre à jour "version" dans package.json (même valeur)
+ *   4. `git tag v<version>` puis `git push origin v<version>`
+ */
+
+export const APP_VERSION = "1.0.1";
+
+export type ReleaseType = "feat" | "fix" | "perf" | "chore";
+
+export interface ChangeEntry {
+  type: ReleaseType;
+  text: string;
+}
+
+export interface Release {
+  version: string;
+  date: string;         // ISO YYYY-MM-DD
+  changes: ChangeEntry[];
+}
+
+export const RELEASES: Release[] = [
+  {
+    version: "1.0.1",
+    date: "2026-03-09",
+    changes: [
+      {
+        type: "fix",
+        text: "Correction critique : le contenu de l'éditeur n'était pas sauvegardé lors du changement de page. Les opérations de chiffrement s'exécutaient à l'intérieur de la transaction IndexedDB, provoquant un auto-commit prématuré avant l'écriture des blocs.",
+      },
+    ],
+  },
+  {
+    version: "1.0.0",
+    date: "2026-01-01",
+    changes: [
+      { type: "feat", text: "Lancement initial de ROOT — éditeur de notes chiffré zéro-connaissance." },
+      { type: "feat", text: "Kanban avec colonnes personnalisables, priorités et dates d'échéance." },
+      { type: "feat", text: "Calendrier avec synchronisation CalDAV (Infomaniak, iCloud, Nextcloud…)." },
+      { type: "feat", text: "Système de Tags : créer, assigner et visualiser les tags sur pages, dossiers et tâches." },
+      { type: "feat", text: "Export/import de sauvegarde chiffrée portable entre vaults." },
+      { type: "feat", text: "Thème clair/sombre, sidebar collapsible, drag-and-drop dans l'arbre de pages." },
+      { type: "feat", text: "Chiffrement AES-GCM 256 bits, dérivation PBKDF2 600 000 itérations." },
+    ],
+  },
+];

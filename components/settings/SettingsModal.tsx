@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { RELEASES, APP_VERSION, type ReleaseType } from "@/lib/changelog";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useCategoriesStore } from "@/stores/categoriesStore";
 import { testCalDAVConnection, discoverCalendars, type DiscoveredCalendar } from "@/lib/CalDAVService";
@@ -16,7 +17,7 @@ import { useCalendarStore } from "@/stores/calendarStore";
 import { exportBackup, importBackup, nukeVault } from "@/lib/BackupService";
 import type { CalDAVConfig, CalendarEntry } from "@/lib/database";
 
-type Tab = "profil" | "caldav" | "export" | "données";
+type Tab = "profil" | "caldav" | "export" | "données" | "nouveautés";
 
 interface Props { onClose: () => void }
 
@@ -45,7 +46,7 @@ export default function SettingsModal({ onClose }: Props) {
 
         {/* Tabs */}
         <div className="flex gap-1 px-6 pt-4 shrink-0">
-          {(["profil", "caldav", "export", "données"] as Tab[]).map((t) => (
+          {(["profil", "caldav", "export", "données", "nouveautés"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -55,7 +56,7 @@ export default function SettingsModal({ onClose }: Props) {
                   : "text-[var(--text-muted)] hover:text-[var(--text)]"
               }`}
             >
-              {t === "profil" ? "Profil" : t === "caldav" ? "CalDAV" : t === "export" ? "Export MD" : "Données"}
+              {t === "profil" ? "Profil" : t === "caldav" ? "CalDAV" : t === "export" ? "Export MD" : t === "données" ? "Données" : "Nouveautés"}
             </button>
           ))}
         </div>
@@ -83,6 +84,7 @@ export default function SettingsModal({ onClose }: Props) {
           {tab === "données" && (
             <DataTab onClose={onClose} importRef={importRef} />
           )}
+          {tab === "nouveautés" && <ChangelogTab />}
         </div>
       </div>
     </div>
@@ -605,3 +607,52 @@ const inputCls =
 
 const btnCls =
   "px-4 py-2 rounded-lg text-sm bg-[var(--surface-3)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--border-light)] transition-colors disabled:opacity-40";
+
+// ── Onglet Nouveautés ─────────────────────────────────────────────────────────
+
+const TYPE_LABEL: Record<ReleaseType, string> = {
+  feat: "Nouveauté",
+  fix:  "Correction",
+  perf: "Performance",
+  chore: "Interne",
+};
+
+const TYPE_COLOR: Record<ReleaseType, string> = {
+  feat:  "bg-[#22d472]/15 text-[#22d472]",
+  fix:   "bg-orange-500/15 text-orange-400",
+  perf:  "bg-blue-500/15 text-blue-400",
+  chore: "bg-[var(--surface-3)] text-[var(--text-faint)]",
+};
+
+function ChangelogTab() {
+  return (
+    <div className="flex flex-col gap-8">
+      <div className="flex items-center gap-3">
+        <div>
+          <p className="text-lg font-bold text-[var(--text)]">ROOT</p>
+          <p className="text-xs text-[var(--text-faint)] font-mono">version actuelle {APP_VERSION}</p>
+        </div>
+      </div>
+
+      {RELEASES.map((release) => (
+        <div key={release.version} className="flex flex-col gap-3">
+          <div className="flex items-baseline gap-3 border-b border-[var(--border)] pb-2">
+            <span className="font-bold text-[var(--accent)] font-mono text-sm">v{release.version}</span>
+            <span className="text-xs text-[var(--text-faint)]">{release.date}</span>
+          </div>
+
+          <ul className="flex flex-col gap-2.5">
+            {release.changes.map((c, i) => (
+              <li key={i} className="flex items-start gap-3">
+                <span className={`shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${TYPE_COLOR[c.type]}`}>
+                  {TYPE_LABEL[c.type]}
+                </span>
+                <span className="text-sm text-[var(--text-muted)] leading-relaxed">{c.text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
