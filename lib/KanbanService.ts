@@ -19,6 +19,7 @@ export interface TaskProperties {
   priority: TaskPriority;
   dueDate?: string;    // ISO 8601
   tags?: string[];
+  details?: string;    // description libre
 }
 
 export interface KanbanTask {
@@ -29,6 +30,7 @@ export interface KanbanTask {
   priority: TaskPriority;
   dueDate?: string;
   tags?: string[];
+  details?: string;
   order: number;
   createdAt: number;
 }
@@ -57,6 +59,7 @@ export async function loadAllTasks(): Promise<KanbanTask[]> {
         priority: props.priority ?? "none",
         dueDate: props.dueDate,
         tags: props.tags,
+        details: props.details,
         order: block.order,
         createdAt: block.createdAt,
       } satisfies KanbanTask;
@@ -109,7 +112,7 @@ export async function updateTaskDueDate(
 
 export async function createTask(
   title: string,
-  status: TaskStatus
+  props: Partial<TaskProperties> & { status: TaskStatus }
 ): Promise<KanbanTask> {
   const pageId = KANBAN_PAGE_ID;
   const now = Date.now();
@@ -119,7 +122,7 @@ export async function createTask(
     type: "paragraph",
     content: [{ type: "text", text: title }],
   };
-  const props: TaskProperties = { status, priority: "none" };
+  const fullProps: TaskProperties = { priority: "none", ...props };
 
   const count = await db.blocks
     .where("pageId")
@@ -133,7 +136,7 @@ export async function createTask(
     parentBlockId: null,
     type: "task",
     encryptedContent: await encryptValue(content),
-    encryptedProperties: await encryptValue(props),
+    encryptedProperties: await encryptValue(fullProps),
     order: count,
     createdAt: now,
     updatedAt: now,
@@ -144,8 +147,11 @@ export async function createTask(
     blockId: id,
     pageId,
     title,
-    status,
-    priority: "none",
+    status: fullProps.status,
+    priority: fullProps.priority ?? "none",
+    dueDate: fullProps.dueDate,
+    tags: fullProps.tags,
+    details: fullProps.details,
     order: count,
     createdAt: now,
   };

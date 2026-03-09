@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -10,6 +10,7 @@ import {
 } from "@dnd-kit/core";
 import { useKanbanStore } from "@/stores/kanbanStore";
 import KanbanColumn from "./KanbanColumn";
+import TaskDetailModal from "./TaskDetailModal";
 import type { TaskStatus } from "@/lib/database";
 
 interface Column {
@@ -27,6 +28,7 @@ const COLUMNS: Column[] = [
 
 export default function KanbanBoard() {
   const { tasks, isLoading, loadTasks, moveTask } = useKanbanStore();
+  const [showCreate, setShowCreate] = useState(false);
 
   useEffect(() => { loadTasks(); }, [loadTasks]);
 
@@ -48,9 +50,15 @@ export default function KanbanBoard() {
         <h2 className="text-lg font-semibold">Kanban</h2>
         <button
           onClick={loadTasks}
-          className="ml-auto text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+          className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
         >
           ↻ Rafraîchir
+        </button>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-[var(--surface-3)] border border-[var(--border-light)] text-[var(--text)] hover:border-[var(--accent)] transition-colors"
+        >
+          <span className="text-[var(--accent)] font-bold">+</span> Nouvelle tâche
         </button>
       </div>
 
@@ -72,6 +80,10 @@ export default function KanbanBoard() {
             ))}
           </div>
         </DndContext>
+      )}
+
+      {showCreate && (
+        <TaskDetailModal onClose={() => setShowCreate(false)} />
       )}
     </div>
   );

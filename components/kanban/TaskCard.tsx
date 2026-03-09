@@ -80,6 +80,17 @@ export default function TaskCard({ task }: { task: KanbanTask }) {
         {task.title}
       </p>
 
+      {/* Détails — extrait tronqué */}
+      {task.details && (
+        <p
+          className="text-xs text-[var(--text-faint)] mb-2 line-clamp-2 leading-relaxed select-none"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => setShowDetail(true)}
+        >
+          {task.details}
+        </p>
+      )}
+
       {/* Tag dots */}
       {taskTagDefs.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-2">

@@ -33,7 +33,7 @@ export const useKanbanStore = create<KanbanState>()((set, get) => ({
   },
 
   addTask: async (title, status) => {
-    const task = await createTask(title, status);
+    const task = await createTask(title, { status });
     set((s) => ({ tasks: [...s.tasks, task] }));
   },
 
