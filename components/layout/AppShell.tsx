@@ -75,7 +75,7 @@ export default function AppShell() {
 
             {/* Vue éditeur (feuilles uniquement) */}
             {activePage && !activePage.isFolder && (
-              <div className="max-w-3xl mx-0">
+              <div className="w-[75%] min-w-[480px]">
                 <PageTitle pageId={activePage.id} title={activePage.title} />
                 <PageTagsRow pageId={activePage.id} tagIds={activePage.tagIds ?? []} />
                 <BlockEditor pageId={activePage.id} />

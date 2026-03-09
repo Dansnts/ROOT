@@ -9,7 +9,7 @@
  *   4. `git tag v<version>` puis `git push origin v<version>`
  */
 
-export const APP_VERSION = "1.0.2";
+export const APP_VERSION = "1.0.3";
 
 export type ReleaseType = "feat" | "fix" | "perf" | "chore";
 
@@ -25,6 +25,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.0.3",
+    date: "2026-03-09",
+    changes: [
+      {
+        type: "feat",
+        text: "Barre de filtres dans le Kanban : tri manuel, par date d'échéance ou par priorité, filtres par niveau de priorité et par tags, réinitialisation en un clic.",
+      },
+    ],
+  },
   {
     version: "1.0.2",
     date: "2026-03-09",
