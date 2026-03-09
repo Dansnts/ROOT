@@ -9,7 +9,7 @@
  *   4. `git tag v<version>` puis `git push origin v<version>`
  */
 
-export const APP_VERSION = "1.0.1";
+export const APP_VERSION = "1.0.2";
 
 export type ReleaseType = "feat" | "fix" | "perf" | "chore";
 
@@ -25,6 +25,24 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.0.2",
+    date: "2026-03-09",
+    changes: [
+      {
+        type: "feat",
+        text: "Les tâches Kanban avec une échéance apparaissent dans le Calendrier sous une catégorie virtuelle Kanban, visible automatiquement dans le sous-menu dès qu'une tâche a une date.",
+      },
+      {
+        type: "fix",
+        text: "Les notes d'une tâche Kanban sont maintenant correctement sauvegardées et rechargées. Le champ utilisait un nom différent de celui du système CalDAV, les deux sont unifiés sous description.",
+      },
+      {
+        type: "fix",
+        text: "La modification d'une tâche Kanban ne supprime plus les métadonnées CalDAV associées comme l'identifiant de synchronisation et l'URL distante.",
+      },
+    ],
+  },
   {
     version: "1.0.1",
     date: "2026-03-09",

@@ -80,14 +80,14 @@ export default function TaskCard({ task }: { task: KanbanTask }) {
         {task.title}
       </p>
 
-      {/* Détails — extrait tronqué */}
-      {task.details && (
+      {/* Notes — extrait tronqué */}
+      {task.description && (
         <p
           className="text-xs text-[var(--text-faint)] mb-2 line-clamp-2 leading-relaxed select-none"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={() => setShowDetail(true)}
         >
-          {task.details}
+          {task.description}
         </p>
       )}
 

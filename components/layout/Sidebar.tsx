@@ -20,6 +20,7 @@ import { useVaultStore } from "@/stores/vaultStore";
 import { useTagsStore } from "@/stores/tagsStore";
 import { useCategoriesStore } from "@/stores/categoriesStore";
 import { useCalendarStore, UNCATEGORIZED_ID } from "@/stores/calendarStore";
+import { KANBAN_PAGE_ID } from "@/lib/constants";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useTheme } from "@/hooks/useTheme";
 import { type DecryptedPage } from "@/lib/BlockService";
@@ -529,6 +530,22 @@ function CategoriesSubNav({
       {/* Liste des catégories */}
       {categories.length === 0 && !creating && (
         <p className="px-2 py-1 text-[11px] text-[var(--text-faint)] italic">Aucune catégorie</p>
+      )}
+
+      {/* Entrée virtuelle "Kanban" — tâches avec échéance */}
+      {(countById.get(KANBAN_PAGE_ID) ?? 0) > 0 && (
+        <div
+          className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${
+            activeCategoryId === KANBAN_PAGE_ID
+              ? "bg-[var(--surface-3)] text-[var(--text)]"
+              : "text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+          }`}
+          onClick={() => onCategorySelect(activeCategoryId === KANBAN_PAGE_ID ? null : KANBAN_PAGE_ID)}
+        >
+          <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-[#5b6a7a]" />
+          <span className="flex-1 text-[13px]">Kanban</span>
+          <span className="text-[10px] text-[var(--text-faint)] shrink-0">{countById.get(KANBAN_PAGE_ID)}</span>
+        </div>
       )}
 
       {/* Entrée virtuelle "Sans catégorie" — 100% locale, pas de sync */}

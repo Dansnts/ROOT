@@ -17,9 +17,15 @@ export { KANBAN_PAGE_ID };
 export interface TaskProperties {
   status: TaskStatus;
   priority: TaskPriority;
-  dueDate?: string;    // ISO 8601
+  dueDate?: string;        // ISO 8601
   tags?: string[];
-  details?: string;    // description libre
+  description?: string;   // notes libres — même champ que CalDAVBlockProps.description
+  // Champs CalDAV (conservés tels quels quand présents)
+  caldavEventId?: string;
+  caldavUrl?: string;
+  caldavEtag?: string;
+  endDate?: string;
+  location?: string;
 }
 
 export interface KanbanTask {
@@ -30,7 +36,7 @@ export interface KanbanTask {
   priority: TaskPriority;
   dueDate?: string;
   tags?: string[];
-  details?: string;
+  description?: string;
   order: number;
   createdAt: number;
 }
@@ -59,7 +65,8 @@ export async function loadAllTasks(): Promise<KanbanTask[]> {
         priority: props.priority ?? "none",
         dueDate: props.dueDate,
         tags: props.tags,
-        details: props.details,
+        // "details" était l'ancien nom — rétrocompatibilité
+        description: props.description ?? (props as unknown as { details?: string }).details,
         order: block.order,
         createdAt: block.createdAt,
       } satisfies KanbanTask;
@@ -151,7 +158,7 @@ export async function createTask(
     priority: fullProps.priority ?? "none",
     dueDate: fullProps.dueDate,
     tags: fullProps.tags,
-    details: fullProps.details,
+    description: fullProps.description,
     order: count,
     createdAt: now,
   };
@@ -164,15 +171,23 @@ export async function deleteTask(blockId: string): Promise<void> {
 export async function updateTask(
   blockId: string,
   title: string,
-  props: TaskProperties
+  props: Partial<TaskProperties>
 ): Promise<void> {
+  const block = await db.blocks.get(blockId);
+  if (!block) return;
+
+  // Lire les props existantes pour préserver les champs CalDAV (caldavEventId, caldavUrl…)
+  const existing = await decryptValue<TaskProperties>(block.encryptedProperties);
+
   const content = {
     type: "paragraph",
     content: [{ type: "text", text: title.trim() || "Sans titre" }],
   };
+  const merged: TaskProperties = { ...existing, ...props } as TaskProperties;
+
   await db.blocks.update(blockId, {
     encryptedContent: await encryptValue(content),
-    encryptedProperties: await encryptValue(props),
+    encryptedProperties: await encryptValue(merged),
     updatedAt: Date.now(),
   });
 }

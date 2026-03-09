@@ -43,7 +43,7 @@ export default function TaskDetailModal({ task, defaultStatus = "todo", onClose 
   const [status, setStatus]     = useState<TaskStatus>(task?.status ?? defaultStatus);
   const [priority, setPri]      = useState<TaskPriority>(task?.priority ?? "none");
   const [dueDate, setDueDate]   = useState(task?.dueDate ?? "");
-  const [details, setDetails]   = useState(task?.details ?? "");
+  const [description, setDescription] = useState(task?.description ?? "");
   const [taskTags, setTaskTagsLocal] = useState<string[]>(task?.tags ?? []);
   const [saving, setSaving]     = useState(false);
 
@@ -66,13 +66,13 @@ export default function TaskDetailModal({ task, defaultStatus = "todo", onClose 
     if (!title.trim()) return;
     setSaving(true);
     try {
-      const props: TaskProperties = {
+      const props = {
         status,
         priority,
         dueDate: dueDate || undefined,
         tags: taskTags,
-        details: details || undefined,
-      };
+        description: description || undefined,
+      } satisfies Partial<TaskProperties> & { status: typeof status };
 
       if (isNew) {
         const created = await createTask(title.trim(), props);
@@ -160,12 +160,12 @@ export default function TaskDetailModal({ task, defaultStatus = "todo", onClose 
           />
         </div>
 
-        {/* Détails */}
+        {/* Notes */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs text-[var(--text-faint)] uppercase tracking-wider">Détails</label>
+          <label className="text-xs text-[var(--text-faint)] uppercase tracking-wider">Notes</label>
           <textarea
-            value={details}
-            onChange={(e) => setDetails(e.target.value)}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
             rows={4}
             className="w-full bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text)] text-sm resize-none outline-none focus:border-[var(--accent-hover)] transition-colors"
             placeholder="Description, notes, contexte…"

@@ -102,12 +102,11 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
         let categoryName: string;
 
         if (cat) {
-          // Événement CalDAV avec catégorie
           color = cat.color;
           categoryId = block.pageId;
           categoryName = cat.name;
-        } else if (block.pageId === KANBAN_PAGE_ID) {
-          // Tâche Kanban : couleur basée sur les tags
+        } else if (block.pageId === KANBAN_PAGE_ID || block.type === "task") {
+          // Tâche Kanban — catégorie virtuelle permanente
           const taskTagIds: string[] = (props as unknown as { tags?: string[] }).tags ?? [];
           const taskTags = taskTagIds.map((id) => tagById.get(id)).filter(Boolean);
           color = taskTags.length === 1
@@ -118,7 +117,6 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
           categoryId = KANBAN_PAGE_ID;
           categoryName = "Kanban";
         } else {
-          // Événement sans catégorie connue
           color = fallbackColor(props.status);
           categoryId = UNCATEGORIZED_ID;
           categoryName = "Sans catégorie";
