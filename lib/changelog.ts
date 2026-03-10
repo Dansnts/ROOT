@@ -27,6 +27,24 @@ export interface Release {
 export const RELEASES: Release[] = [
   {
     version: "1.2.0",
+    date: "2026-03-10",
+    changes: [
+      {
+        type: "feat",
+        text: "6 palettes de couleurs (Émeraude, Océan, Violet, Rose, Ambre, Ciel) sélectionnables depuis le menu utilisateur. Chaque palette teinte les surfaces du mode nuit et adapte l'accent du mode jour.",
+      },
+      {
+        type: "fix",
+        text: "Mode jour enfin fonctionnel : correction de la cascade CSS qui laissait les règles d'accent écraser les surfaces claires. Texte passé de brun (#2e1c0a) à quasi-noir (#1a1a1a) pour une meilleure lisibilité.",
+      },
+      {
+        type: "fix",
+        text: "Kanban : les checkboxes créées dans l'éditeur de notes n'apparaissent plus comme tâches Kanban. Le chargement filtre désormais par KANBAN_PAGE_ID.",
+      },
+    ],
+  },
+  {
+    version: "1.1.0",
     date: "2026-03-09",
     changes: [
       {
@@ -43,7 +61,7 @@ export const RELEASES: Release[] = [
       },
       {
         type: "fix",
-        text: "Centrage du titre du calendrier (mois/semaine) : les colonnes gauche et droite du header prennent désormais la même largeur flexible, assurant un centrage réel du titre.",
+        text: "Centrage du titre du calendrier : les colonnes gauche et droite du header prennent la même largeur flexible, assurant un centrage réel du titre.",
       },
       {
         type: "feat",
