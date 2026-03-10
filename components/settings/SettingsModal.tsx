@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Cropper from "react-easy-crop";
+import type { Area } from "react-easy-crop";
 import { XIcon, RefreshIcon, CheckIcon } from "@/components/ui/icons";
 import { RELEASES, APP_VERSION, type ReleaseType } from "@/lib/changelog";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -17,6 +19,8 @@ import { usePagesStore } from "@/stores/pagesStore";
 import { useCalendarStore } from "@/stores/calendarStore";
 import { exportBackup, importBackup, nukeVault } from "@/lib/BackupService";
 import type { CalDAVConfig, CalendarEntry } from "@/lib/database";
+import { db } from "@/lib/database";
+import { vaultService } from "@/lib/VaultService";
 
 type Tab = "profil" | "caldav" | "export" | "données" | "nouveautés";
 
@@ -24,7 +28,7 @@ interface Props { onClose: () => void }
 
 export default function SettingsModal({ onClose }: Props) {
   const [tab, setTab]     = useState<Tab>("profil");
-  const { caldav, userName, loadSettings, saveCalDAV, clearCalDAV, saveUserName } = useSettingsStore();
+  const { caldav, userName, userAvatar, loadSettings, saveCalDAV, clearCalDAV, saveUserName, saveUserAvatar, clearUserAvatar } = useSettingsStore();
   const { loadPages } = usePagesStore();
   const { sync } = useCalendarStore();
   const { categories, createCategory } = useCategoriesStore();
@@ -64,7 +68,13 @@ export default function SettingsModal({ onClose }: Props) {
 
         <div className="p-6 flex-1 overflow-y-auto">
           {tab === "profil" && (
-            <ProfilTab userName={userName} onSave={saveUserName} />
+            <ProfilTab
+              userName={userName}
+              userAvatar={userAvatar}
+              onSave={saveUserName}
+              onSaveAvatar={saveUserAvatar}
+              onClearAvatar={clearUserAvatar}
+            />
           )}
           {tab === "caldav" && (
             <CalDAVTab
@@ -94,9 +104,39 @@ export default function SettingsModal({ onClose }: Props) {
 
 // ── Onglet Profil ─────────────────────────────────────────────────────────────
 
-function ProfilTab({ userName, onSave }: { userName: string | null; onSave: (n: string) => Promise<void> }) {
-  const [value, setValue] = useState(userName ?? "");
-  const [saved, setSaved] = useState(false);
+/** Extrait la zone recadrée de l'image source et retourne un dataURL JPEG 256×256. */
+async function cropImageToDataUrl(imageSrc: string, pixelCrop: Area): Promise<string> {
+  const img = new Image();
+  img.src = imageSrc;
+  await new Promise<void>((resolve) => { img.onload = () => resolve(); });
+  const SIZE   = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width  = SIZE;
+  canvas.height = SIZE;
+  canvas.getContext("2d")!.drawImage(
+    img,
+    pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height,
+    0, 0, SIZE, SIZE,
+  );
+  return canvas.toDataURL("image/jpeg", 0.88);
+}
+
+function ProfilTab({
+  userName, userAvatar, onSave, onSaveAvatar, onClearAvatar,
+}: {
+  userName: string | null;
+  userAvatar: string | null;
+  onSave: (n: string) => Promise<void>;
+  onSaveAvatar: (dataUrl: string) => Promise<void>;
+  onClearAvatar: () => Promise<void>;
+}) {
+  const [value, setValue]         = useState(userName ?? "");
+  const [saved, setSaved]         = useState(false);
+  // URL objet temporaire de l'image sélectionnée (libérée après crop)
+  const [cropSrc, setCropSrc]     = useState<string | null>(null);
+  const avatarInputRef            = useRef<HTMLInputElement>(null);
+
+  const initials = userName ? userName.slice(0, 2).toUpperCase() : "?";
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -105,26 +145,190 @@ function ProfilTab({ userName, onSave }: { userName: string | null; onSave: (n: 
     setTimeout(() => setSaved(false), 2000);
   }
 
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Libérer l'ancienne URL objet si elle existait
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(URL.createObjectURL(file));
+    if (avatarInputRef.current) avatarInputRef.current.value = "";
+  }
+
+  async function handleCropConfirm(croppedDataUrl: string) {
+    // Libérer l'URL objet temporaire immédiatement
+    if (cropSrc) { URL.revokeObjectURL(cropSrc); setCropSrc(null); }
+    // Supprimer l'ancien avatar avant d'enregistrer le nouveau (libère la mémoire store)
+    await onClearAvatar();
+    await onSaveAvatar(croppedDataUrl);
+  }
+
+  function handleCropCancel() {
+    if (cropSrc) { URL.revokeObjectURL(cropSrc); setCropSrc(null); }
+  }
+
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-        Votre prénom est chiffré et stocké localement. Il est utilisé pour le message de bienvenue à l&apos;ouverture.
-      </p>
-      <form onSubmit={handleSave} className="flex flex-col gap-3">
-        <Field label="Votre prénom">
-          <input
-            type="text"
-            value={value}
-            onChange={(e) => { setValue(e.target.value); setSaved(false); }}
-            placeholder="Ex : Alice"
-            autoComplete="given-name"
-            className={inputCls}
+    <>
+      {/* Modal de recadrage (monte au-dessus de tout) */}
+      {cropSrc && (
+        <AvatarCropModal
+          src={cropSrc}
+          onConfirm={handleCropConfirm}
+          onCancel={handleCropCancel}
+        />
+      )}
+
+      <div className="flex flex-col gap-6">
+        {/* Avatar */}
+        <div className="flex flex-col gap-3">
+          <p className="text-xs text-[var(--text-faint)] uppercase tracking-wider">Photo de profil</p>
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-[var(--surface-3)] border border-[var(--border-light)] flex items-center justify-center overflow-hidden shrink-0">
+              {userAvatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={userAvatar} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-xl font-bold text-[var(--text-muted)] font-mono">{initials}</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                className={`${btnCls} text-xs`}
+              >
+                Choisir une image
+              </button>
+              {userAvatar && (
+                <button
+                  onClick={onClearAvatar}
+                  className="text-xs text-[var(--text-faint)] hover:text-[var(--danger)] transition-colors"
+                >
+                  Supprimer la photo
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-[var(--border)]" />
+
+        {/* Nom */}
+        <div className="flex flex-col gap-3">
+          <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+            Votre prénom est chiffré et stocké localement. Il est utilisé pour le message de bienvenue à l&apos;ouverture.
+          </p>
+          <form onSubmit={handleSave} className="flex flex-col gap-3">
+            <Field label="Votre prénom">
+              <input
+                type="text"
+                value={value}
+                onChange={(e) => { setValue(e.target.value); setSaved(false); }}
+                placeholder="Ex : Alice"
+                autoComplete="given-name"
+                className={inputCls}
+              />
+            </Field>
+            <button type="submit" className={`${btnCls} flex items-center gap-1.5`}>
+              {saved ? <><CheckIcon size={13} /> Sauvegardé</> : "Sauvegarder"}
+            </button>
+          </form>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Modal de recadrage avatar ─────────────────────────────────────────────────
+
+function AvatarCropModal({
+  src, onConfirm, onCancel,
+}: {
+  src: string;
+  onConfirm: (dataUrl: string) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [crop,   setCrop]   = useState({ x: 0, y: 0 });
+  const [zoom,   setZoom]   = useState(1);
+  const [saving, setSaving] = useState(false);
+  const [croppedArea, setCroppedArea] = useState<Area | null>(null);
+
+  const onCropComplete = useCallback((_: Area, pixelCrop: Area) => {
+    setCroppedArea(pixelCrop);
+  }, []);
+
+  async function handleConfirm() {
+    if (!croppedArea) return;
+    setSaving(true);
+    const dataUrl = await cropImageToDataUrl(src, croppedArea);
+    await onConfirm(dataUrl);
+    setSaving(false);
+  }
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="bg-[var(--surface-2)] border border-[var(--border-light)] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        style={{ width: 420, maxWidth: "95vw" }}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border)]">
+          <p className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-widest">Recadrer la photo</p>
+          <button onClick={onCancel} className="text-[var(--text-faint)] hover:text-[var(--text-muted)] w-7 h-7 flex items-center justify-center rounded hover:bg-[var(--surface-3)] transition-colors">
+            <XIcon size={14} />
+          </button>
+        </div>
+
+        {/* Zone de crop */}
+        <div className="relative bg-black" style={{ height: 320 }}>
+          <Cropper
+            image={src}
+            crop={crop}
+            zoom={zoom}
+            aspect={1}
+            cropShape="round"
+            showGrid={false}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onCropComplete={onCropComplete}
+            style={{
+              containerStyle: { background: "#000" },
+              cropAreaStyle: { border: "2px solid var(--accent)", boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)" },
+            }}
           />
-        </Field>
-        <button type="submit" className={`${btnCls} flex items-center gap-1.5`}>
-          {saved ? <><CheckIcon size={13} /> Sauvegardé</> : "Sauvegarder"}
-        </button>
-      </form>
+        </div>
+
+        {/* Zoom slider */}
+        <div className="px-5 py-3 flex items-center gap-3 border-t border-[var(--border)]">
+          <span className="text-xs text-[var(--text-faint)] shrink-0">Zoom</span>
+          <input
+            type="range"
+            min={1} max={3} step={0.01}
+            value={zoom}
+            onChange={(e) => setZoom(Number(e.target.value))}
+            className="flex-1 accent-[var(--accent)] h-1 rounded-full cursor-pointer"
+          />
+          <span className="text-xs text-[var(--text-faint)] font-mono w-8 text-right shrink-0">{zoom.toFixed(1)}×</span>
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-2 px-5 py-3 border-t border-[var(--border)]">
+          <button onClick={onCancel} className="ml-auto px-4 py-1.5 rounded-lg text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] transition-colors">
+            Annuler
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={saving || !croppedArea}
+            className="px-4 py-1.5 rounded-lg text-sm bg-[var(--accent)] text-white hover:opacity-90 transition-opacity disabled:opacity-40"
+          >
+            {saving ? "Sauvegarde…" : "Appliquer"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -469,20 +673,38 @@ function DataTab({ onClose, importRef }: {
   onClose: () => void;
   importRef: React.RefObject<HTMLInputElement | null>;
 }) {
-  const [nukeText, setNukeText] = useState("");
-  const [busy, setBusy]         = useState(false);
-  const [status, setStatus]     = useState<string | null>(null);
+  const [nukeText, setNukeText]           = useState("");
+  const [busy, setBusy]                   = useState(false);
+  const [status, setStatus]               = useState<string | null>(null);
+  const [showPwPrompt, setShowPwPrompt]   = useState(false);
+  const [pwInput, setPwInput]             = useState("");
+  const [pwError, setPwError]             = useState<string | null>(null);
 
-  async function handleExport() {
+  async function verifyAndExport() {
+    setPwError(null);
     setBusy(true);
     try {
+      const meta = await db.vault_meta.get(1);
+      if (!meta) { setPwError("Vault introuvable."); setBusy(false); return; }
+      const salt  = vaultService.b64ToSalt(meta.salt);
+      const key   = await vaultService.deriveKey(pwInput, salt);
+      const valid = await vaultService.verifyKey(key, meta.verifier);
+      if (!valid) { setPwError("Mot de passe incorrect."); setBusy(false); return; }
       await exportBackup();
       setStatus("Backup téléchargé.");
+      setShowPwPrompt(false);
+      setPwInput("");
     } catch {
       setStatus("Erreur lors de l'export.");
     } finally {
       setBusy(false);
     }
+  }
+
+  async function handleExport() {
+    setShowPwPrompt(true);
+    setPwInput("");
+    setPwError(null);
   }
 
   async function handleImport(file: File) {
@@ -521,9 +743,33 @@ function DataTab({ onClose, importRef }: {
           Exporte toutes vos données déchiffrées dans un fichier JSON portable.
           Ce backup peut être importé par n&apos;importe quel vault, quel que soit le Master Password.
         </p>
-        <button onClick={handleExport} disabled={busy} className={btnCls}>
-          ↓ Télécharger le backup (.json)
-        </button>
+        {!showPwPrompt ? (
+          <button onClick={handleExport} disabled={busy} className={btnCls}>
+            ↓ Télécharger le backup (.json)
+          </button>
+        ) : (
+          <div className="flex flex-col gap-2 p-3 bg-[var(--surface-3)] border border-[var(--border-light)] rounded-xl">
+            <p className="text-xs text-[var(--text-muted)]">Confirmez votre Master Password pour continuer :</p>
+            <input
+              type="password"
+              autoFocus
+              value={pwInput}
+              onChange={(e) => { setPwInput(e.target.value); setPwError(null); }}
+              onKeyDown={(e) => { if (e.key === "Enter") verifyAndExport(); if (e.key === "Escape") setShowPwPrompt(false); }}
+              placeholder="Master Password"
+              className={inputCls}
+            />
+            {pwError && <p className="text-xs text-red-400">{pwError}</p>}
+            <div className="flex gap-2">
+              <button onClick={verifyAndExport} disabled={busy || !pwInput} className={`${btnCls} flex items-center gap-1.5`}>
+                {busy ? "Vérification…" : <><CheckIcon size={13} /> Confirmer</>}
+              </button>
+              <button onClick={() => { setShowPwPrompt(false); setPwInput(""); setPwError(null); }} className="text-xs text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors px-2">
+                Annuler
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="border-t border-[var(--border)]" />

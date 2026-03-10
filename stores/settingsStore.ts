@@ -16,12 +16,15 @@ interface SettingsState {
   caldav: CalDAVConfig | null;
   ui: UIPreferences;
   userName: string | null;
+  userAvatar: string | null;   // data-URL base64
   isLoading: boolean;
 
   loadSettings: () => Promise<void>;
   saveCalDAV: (config: CalDAVConfig) => Promise<void>;
   clearCalDAV: () => Promise<void>;
   saveUserName: (name: string) => Promise<void>;
+  saveUserAvatar: (dataUrl: string) => Promise<void>;
+  clearUserAvatar: () => Promise<void>;
 }
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -30,14 +33,16 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
   caldav: null,
   ui: { sidebarWidth: 240 },
   userName: null,
+  userAvatar: null,
   isLoading: false,
 
   loadSettings: async () => {
     set({ isLoading: true });
     try {
-      const [caldavRow, nameRow] = await Promise.all([
+      const [caldavRow, nameRow, avatarRow] = await Promise.all([
         db.settings.get(DB_KEYS.caldavConfig),
         db.settings.get(DB_KEYS.userName),
+        db.settings.get(DB_KEYS.userAvatar),
       ]);
 
       let caldav: CalDAVConfig | null = null;
@@ -107,7 +112,12 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
         userName = await decryptValue<string>(nameRow.encryptedValue);
       }
 
-      set({ caldav, userName, isLoading: false });
+      let userAvatar: string | null = null;
+      if (avatarRow) {
+        userAvatar = await decryptValue<string>(avatarRow.encryptedValue);
+      }
+
+      set({ caldav, userName, userAvatar, isLoading: false });
     } catch {
       set({ isLoading: false });
     }
@@ -137,5 +147,19 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
     // Aussi dans localStorage pour affichage sur l'écran de verrouillage (avant unlock)
     try { localStorage.setItem(LS_KEYS.username, trimmed); } catch { /* ignore */ }
     set({ userName: trimmed });
+  },
+
+  saveUserAvatar: async (dataUrl: string) => {
+    await db.settings.put({
+      key: DB_KEYS.userAvatar,
+      encryptedValue: await encryptValue(dataUrl),
+      updatedAt: Date.now(),
+    });
+    set({ userAvatar: dataUrl });
+  },
+
+  clearUserAvatar: async () => {
+    await db.settings.delete(DB_KEYS.userAvatar);
+    set({ userAvatar: null });
   },
 }));

@@ -353,3 +353,11 @@ body {
 .root-calendar .fc-list-day-cushion { background: var(--surface) !important; }
 .root-calendar .fc-list-day-text,
 .root-calendar .fc-list-day-side-text { color: var(--text-muted); }
+
+/* ── Vaul Drawer — animation slide droite ─────────────────────────────────── */
+[vaul-drawer][vaul-drawer-direction="right"] {
+  transform: translateX(100%);
+}
+[vaul-drawer][vaul-drawer-direction="right"][data-state="open"] {
+  transform: translateX(0);
+}

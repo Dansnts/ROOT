@@ -13,17 +13,17 @@ export function Calendar({ className = "", ...props }: CalendarProps) {
       weekStartsOn={1}
       showOutsideDays
       fixedWeeks
-      className={`p-3 select-none ${className}`}
+      className={`p-3 select-none relative ${className}`}
       classNames={{
         months: "flex flex-col",
         month: "space-y-2",
-        month_caption: "flex justify-center items-center relative h-8 mb-1",
+        month_caption: "flex justify-center items-center h-8 mb-1",
         caption_label: "text-sm font-medium text-[var(--text)] capitalize",
-        nav: "flex items-center gap-1",
+        nav: "absolute top-0 left-0 right-0 flex items-center justify-between h-8 pointer-events-none",
         button_previous:
-          "absolute left-0 p-1 w-7 h-7 flex items-center justify-center rounded-md text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface-3)] transition-colors",
+          "pointer-events-auto p-1 w-7 h-7 flex items-center justify-center rounded-md text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors",
         button_next:
-          "absolute right-0 p-1 w-7 h-7 flex items-center justify-center rounded-md text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface-3)] transition-colors",
+          "pointer-events-auto p-1 w-7 h-7 flex items-center justify-center rounded-md text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors",
         month_grid: "w-full border-collapse",
         weekdays: "flex",
         weekday:

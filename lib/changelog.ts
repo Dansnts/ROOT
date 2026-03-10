@@ -9,7 +9,7 @@
  *   4. `git tag v<version>` puis `git push origin v<version>`
  */
 
-export const APP_VERSION = "1.2.0";
+export const APP_VERSION = "1.2.1";
 
 export type ReleaseType = "feat" | "fix" | "perf" | "chore";
 
@@ -26,20 +26,28 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
-    version: "1.2.0",
+    version: "1.2.1",
     date: "2026-03-10",
     changes: [
       {
         type: "feat",
-        text: "6 palettes de couleurs (Émeraude, Océan, Violet, Rose, Ambre, Ciel) sélectionnables depuis le menu utilisateur. Chaque palette teinte les surfaces du mode nuit et adapte l'accent du mode jour.",
+        text: "Vue Statistiques : radar chart d'urgence par tag (score pondéré), tableau des rendus de la semaine, compteurs de priorités globaux et filtrables par tag.",
+      },
+      {
+        type: "feat",
+        text: "Avatar utilisateur : recadrage interactif (react-easy-crop) avec zoom, forme circulaire et aperçu en temps réel. Les ObjectURLs temporaires sont libérés immédiatement après confirmation ou annulation.",
+      },
+      {
+        type: "feat",
+        text: "Confirmation du Master Password avant le téléchargement du backup JSON.",
       },
       {
         type: "fix",
-        text: "Mode jour enfin fonctionnel : correction de la cascade CSS qui laissait les règles d'accent écraser les surfaces claires. Texte passé de brun (#2e1c0a) à quasi-noir (#1a1a1a) pour une meilleure lisibilité.",
+        text: "Drawers (événement, tâche Kanban, changelog) : animation de fermeture slide vers la droite désormais visible avant le démontage du composant.",
       },
       {
         type: "fix",
-        text: "Kanban : les checkboxes créées dans l'éditeur de notes n'apparaissent plus comme tâches Kanban. Le chargement filtre désormais par KANBAN_PAGE_ID.",
+        text: "Date picker (react-day-picker v9) : boutons ‹ › ne débordent plus hors du conteneur — positionnement corrigé avec relative sur la racine et nav en absolute.",
       },
     ],
   },

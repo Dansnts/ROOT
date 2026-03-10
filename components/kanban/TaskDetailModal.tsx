@@ -39,6 +39,9 @@ const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
 ];
 
 export default function TaskDetailModal({ task, defaultStatus = "todo", onClose }: Props) {
+  const [open, setOpen] = useState(true);
+  function handleClose() { setOpen(false); setTimeout(onClose, 300); }
+
   const isNew = !task;
   const { removeTask, loadTasks } = useKanbanStore();
   const { tags, createTag, setTaskTags } = useTagsStore();
@@ -90,7 +93,7 @@ export default function TaskDetailModal({ task, defaultStatus = "todo", onClose 
       }
 
       await loadTasks();
-      onClose();
+      handleClose();
     } finally {
       setSaving(false);
     }
@@ -100,7 +103,7 @@ export default function TaskDetailModal({ task, defaultStatus = "todo", onClose 
     if (!task) return;
     await removeTask(task.blockId);
     toast("Tâche supprimée", { description: task.title });
-    onClose();
+    handleClose();
   }
 
   const dueDateDisplay = dueDate
@@ -110,7 +113,7 @@ export default function TaskDetailModal({ task, defaultStatus = "todo", onClose 
     : null;
 
   return (
-    <Drawer open onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Drawer open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
       <DrawerContent>
         <div className="flex flex-col h-full">
           {/* Header */}
@@ -119,7 +122,7 @@ export default function TaskDetailModal({ task, defaultStatus = "todo", onClose 
               {isNew ? "Nouvelle tâche" : "Tâche"}
             </h3>
             <DrawerClose
-              onClick={onClose}
+              onClick={handleClose}
               className="text-[var(--text-faint)] hover:text-[var(--text-muted)] text-sm w-7 h-7 flex items-center justify-center rounded hover:bg-[var(--surface-3)] transition-colors"
             >
               <XIcon size={14} />
@@ -297,7 +300,7 @@ export default function TaskDetailModal({ task, defaultStatus = "todo", onClose 
               </button>
             )}
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="ml-auto px-4 py-2 rounded-lg text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] transition-colors"
             >
               Annuler

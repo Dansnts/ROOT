@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Drawer, DrawerContent, DrawerClose } from "@/components/ui/drawer";
 import { RELEASES, APP_VERSION, type ReleaseType } from "@/lib/changelog";
 import { XIcon, GithubIcon } from "@/components/ui/icons";
@@ -18,8 +19,10 @@ function formatDate(iso: string) {
 interface Props { onClose: () => void }
 
 export default function ChangelogDrawer({ onClose }: Props) {
+  const [open, setOpen] = useState(true);
+  function handleClose() { setOpen(false); setTimeout(onClose, 300); }
   return (
-    <Drawer open onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Drawer open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
       <DrawerContent>
         <div className="flex flex-col h-full">
 
@@ -45,7 +48,7 @@ export default function ChangelogDrawer({ onClose }: Props) {
                 GitHub
               </a>
               <DrawerClose
-                onClick={onClose}
+                onClick={handleClose}
                 className="text-[var(--text-faint)] hover:text-[var(--text-muted)] w-7 h-7 flex items-center justify-center rounded hover:bg-[var(--surface-3)] transition-colors"
               >
                 <XIcon size={14} />

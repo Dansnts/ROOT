@@ -25,4 +25,5 @@ export const DB_KEYS = {
   caldavConfig: "caldav_config",
   calendarCategories: "calendar_categories",
   userName: "user_name",
+  userAvatar: "user_avatar",
 } as const;

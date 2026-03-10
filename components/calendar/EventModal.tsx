@@ -17,6 +17,12 @@ interface Props {
 }
 
 export default function EventModal({ initialDate, event, onClose }: Props) {
+  const [open, setOpen] = useState(true);
+
+  function handleClose() {
+    setOpen(false);
+    setTimeout(onClose, 300); // laisse l'animation se terminer avant de démonter
+  }
   const { createEvent, updateEvent, deleteEvent, moveEventToCategory } = useCalendarStore();
   const { categories } = useCategoriesStore();
   const { caldav } = useSettingsStore();
@@ -71,7 +77,7 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
         await createEvent(data, categoryId, selectedEntry);
         toast.success("Événement créé");
       }
-      onClose();
+      handleClose();
     } finally {
       setSaving(false);
     }
@@ -83,7 +89,7 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
     try {
       await deleteEvent(event.id);
       toast("Événement supprimé", { description: event.title });
-      onClose();
+      handleClose();
     } finally {
       setDeleting(false);
     }
@@ -97,7 +103,7 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
   }
 
   return (
-    <Drawer open onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Drawer open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
       <DrawerContent>
         <div className="flex flex-col h-full">
           {/* Header */}
@@ -118,7 +124,7 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
               )}
             </div>
             <DrawerClose
-              onClick={onClose}
+              onClick={handleClose}
               className="text-[var(--text-faint)] hover:text-[var(--text-muted)] text-sm w-7 h-7 flex items-center justify-center rounded hover:bg-[var(--surface-3)] transition-colors"
             >
               <XIcon size={14} />
@@ -166,7 +172,7 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
                 </span>
               </button>
               {showStartCal && (
-                <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--surface-3)]">
+                <div className="border border-[var(--border)] rounded-xl bg-[var(--surface-3)]">
                   <Calendar
                     mode="single"
                     selected={dateFromStr(dtstart)}
@@ -202,7 +208,7 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
                 )}
               </button>
               {showEndCal && (
-                <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--surface-3)]">
+                <div className="border border-[var(--border)] rounded-xl bg-[var(--surface-3)]">
                   <Calendar
                     mode="single"
                     selected={dateFromStr(dtend)}
@@ -268,7 +274,7 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
               </button>
             )}
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="ml-auto px-4 py-2 rounded-lg text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] transition-colors"
             >
               Annuler

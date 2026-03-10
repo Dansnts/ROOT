@@ -35,7 +35,7 @@ export function DrawerContent({
     <DrawerPrimitive.Portal>
       <DrawerPrimitive.Overlay className="fixed inset-0 z-50 bg-black/20 backdrop-blur-[2px]" />
       <DrawerPrimitive.Content
-        className={`fixed right-0 top-0 bottom-0 z-50 flex flex-col bg-[var(--surface-2)] border-l border-[var(--border-light)] shadow-2xl outline-none w-[520px] max-w-[calc(100vw-2rem)] ${className}`}
+        className={`fixed right-0 top-0 bottom-0 z-50 flex flex-col bg-[var(--surface-2)] border-l border-[var(--border-light)] shadow-2xl outline-none w-[520px] max-w-[calc(100vw-2rem)] transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${className}`}
       >
         {children}
       </DrawerPrimitive.Content>

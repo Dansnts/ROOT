@@ -40,10 +40,11 @@ const ChangelogDrawer = dynamic(() => import("@/components/layout/ChangelogDrawe
 
 // ── Icônes SVG inline (currentColor → s'adaptent dark/light auto) ──────────
 const NAV_ITEMS: { id: AppView; label: string; Icon: React.FC<{ size?: number }> }[] = [
-  { id: "notes",    label: "Notes",      Icon: NotesIcon    },
-  { id: "kanban",   label: "Kanban",     Icon: KanbanIcon   },
-  { id: "calendar", label: "Calendrier", Icon: CalendarIcon },
-  { id: "tags",     label: "Tags",       Icon: TagsIcon     },
+  { id: "notes",    label: "Notes",        Icon: NotesIcon    },
+  { id: "kanban",   label: "Kanban",       Icon: KanbanIcon   },
+  { id: "calendar", label: "Calendrier",   Icon: CalendarIcon },
+  { id: "tags",     label: "Tags",         Icon: TagsIcon     },
+  { id: "stats",    label: "Statistiques", Icon: StatsIcon    },
 ];
 
 interface SidebarProps {
@@ -71,7 +72,7 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
   const { lock: lockCategories } = useCategoriesStore();
   const { theme, toggle: toggleTheme, accent, setAccent } = useTheme();
 
-  const { userName } = useSettingsStore();
+  const { userName, userAvatar } = useSettingsStore();
 
   const [showSettings,  setShowSettings]  = useState(false);
   const [showHelp,      setShowHelp]      = useState(false);
@@ -160,9 +161,14 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
           <button
             onClick={() => setShowUserMenu((v) => !v)}
             title={userName ?? "Menu utilisateur"}
-            className="w-8 h-8 rounded-full bg-[var(--surface-3)] border border-[var(--border-light)] flex items-center justify-center text-xs font-bold text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--text)] transition-colors font-mono select-none"
+            className="w-8 h-8 rounded-full bg-[var(--surface-3)] border border-[var(--border-light)] flex items-center justify-center text-xs font-bold text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--text)] transition-colors font-mono select-none overflow-hidden"
           >
-            {userName ? userName.slice(0, 2).toUpperCase() : "?"}
+            {userAvatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={userAvatar} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              userName ? userName.slice(0, 2).toUpperCase() : "?"
+            )}
           </button>
 
           {showUserMenu && (
@@ -856,6 +862,18 @@ function MoonIcon({ size = 16 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  );
+}
+
+function StatsIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polygon points="12 2 19.5 7 19.5 17 12 22 4.5 17 4.5 7"/>
+      <line x1="12" y1="2" x2="12" y2="22"/>
+      <line x1="4.5" y1="7" x2="19.5" y2="17"/>
+      <line x1="19.5" y1="7" x2="4.5" y2="17"/>
     </svg>
   );
 }

@@ -21,8 +21,9 @@ const CalendarView       = dynamic(() => import("@/components/calendar/CalendarV
 const CategoryDetailView = dynamic(() => import("@/components/calendar/CategoryDetailView"),     { ssr: false });
 const TagsView           = dynamic(() => import("@/components/tags/TagsView"),                   { ssr: false });
 const TrashView          = dynamic(() => import("@/components/layout/TrashView"),                { ssr: false });
+const StatsView          = dynamic(() => import("@/components/stats/StatsView"),                 { ssr: false });
 
-export type AppView = "notes" | "kanban" | "calendar" | "tags" | "trash";
+export type AppView = "notes" | "kanban" | "calendar" | "tags" | "stats" | "trash";
 
 export default function AppShell() {
   useAppInit();
@@ -120,6 +121,12 @@ export default function AppShell() {
         {view === "tags" && (
           <div className="flex-1 overflow-hidden">
             <TagsView />
+          </div>
+        )}
+
+        {view === "stats" && (
+          <div className="flex-1 overflow-hidden">
+            <StatsView />
           </div>
         )}
 
