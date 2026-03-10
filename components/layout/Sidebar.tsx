@@ -21,14 +21,22 @@ import { useTagsStore } from "@/stores/tagsStore";
 import { useCategoriesStore } from "@/stores/categoriesStore";
 import { useCalendarStore, UNCATEGORIZED_ID } from "@/stores/calendarStore";
 import { KANBAN_PAGE_ID } from "@/lib/constants";
+import { APP_VERSION } from "@/lib/changelog";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { useTheme } from "@/hooks/useTheme";
+import { useTheme, ACCENTS } from "@/hooks/useTheme";
 import { type DecryptedPage } from "@/lib/BlockService";
 import type { AppView } from "@/components/layout/AppShell";
 import { COLOR_PALETTE } from "@/lib/constants";
+import {
+  ContextMenu, ContextMenuTrigger, ContextMenuContent,
+  ContextMenuItem, ContextMenuSeparator, ContextMenuLabel,
+} from "@/components/ui/context-menu";
+import { toast } from "@/components/ui/sonner";
+import { XIcon, PencilIcon, PlusIcon, GripIcon, FolderPlusIcon, FolderIcon, FolderOpenIcon, FileIcon, ChevronDownIcon, ChevronRightIcon } from "@/components/ui/icons";
 
-const SettingsModal = dynamic(() => import("@/components/settings/SettingsModal"), { ssr: false });
-const HelpModal     = dynamic(() => import("@/components/help/HelpModal"),         { ssr: false });
+const SettingsModal   = dynamic(() => import("@/components/settings/SettingsModal"),       { ssr: false });
+const HelpModal       = dynamic(() => import("@/components/help/HelpModal"),               { ssr: false });
+const ChangelogDrawer = dynamic(() => import("@/components/layout/ChangelogDrawer"),       { ssr: false });
 
 // ── Icônes SVG inline (currentColor → s'adaptent dark/light auto) ──────────
 const NAV_ITEMS: { id: AppView; label: string; Icon: React.FC<{ size?: number }> }[] = [
@@ -61,10 +69,14 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
   const { lock: lockVault } = useVaultStore();
   const { lock: lockTags } = useTagsStore();
   const { lock: lockCategories } = useCategoriesStore();
-  const { theme, toggle: toggleTheme } = useTheme();
+  const { theme, toggle: toggleTheme, accent, setAccent } = useTheme();
 
-  const [showSettings, setShowSettings] = useState(false);
-  const [showHelp,     setShowHelp]     = useState(false);
+  const { userName } = useSettingsStore();
+
+  const [showSettings,  setShowSettings]  = useState(false);
+  const [showHelp,      setShowHelp]      = useState(false);
+  const [showChangelog, setShowChangelog] = useState(false);
+  const [showUserMenu,  setShowUserMenu]  = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropPos, setDropPos] = useState<{ id: string; pos: "before" | "after" | "into" } | null>(null);
 
@@ -133,8 +145,9 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
 
   return (
     <>
-    {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
-    {showHelp     && <HelpModal     onClose={() => setShowHelp(false)} />}
+    {showSettings  && <SettingsModal   onClose={() => setShowSettings(false)} />}
+    {showHelp      && <HelpModal       onClose={() => setShowHelp(false)} />}
+    {showChangelog && <ChangelogDrawer onClose={() => setShowChangelog(false)} />}
     <aside className="flex flex-col w-[360px] h-screen bg-[var(--surface)] border-r border-[var(--border)] select-none shrink-0">
 
       {/* Header — Logo + nom */}
@@ -142,42 +155,74 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
         <LogoIcon size={26} />
         <span className="font-bold text-base tracking-widest text-[var(--accent)] font-mono">ROOT</span>
 
-        <div className="ml-auto flex items-center gap-1">
-          {/* Theme toggle */}
+        {/* Avatar — menu utilisateur */}
+        <div className="ml-auto relative">
           <button
-            onClick={toggleTheme}
-            title={theme === "dark" ? "Passer en mode jour" : "Passer en mode nuit"}
-            className="w-7 h-7 flex items-center justify-center text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors rounded"
+            onClick={() => setShowUserMenu((v) => !v)}
+            title={userName ?? "Menu utilisateur"}
+            className="w-8 h-8 rounded-full bg-[var(--surface-3)] border border-[var(--border-light)] flex items-center justify-center text-xs font-bold text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--text)] transition-colors font-mono select-none"
           >
-            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+            {userName ? userName.slice(0, 2).toUpperCase() : "?"}
           </button>
 
-          {/* Aide */}
-          <button
-            onClick={() => setShowHelp(true)}
-            title="Aide — Gen"
-            className="w-7 h-7 flex items-center justify-center text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors rounded text-sm font-bold font-mono"
-          >
-            ?
-          </button>
+          {showUserMenu && (
+            <>
+              {/* Backdrop pour fermer */}
+              <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
+              <div className="absolute right-0 top-full mt-2 z-50 bg-[var(--surface-2)] border border-[var(--border-light)] rounded-xl shadow-xl py-1 min-w-[160px]">
+                {userName && (
+                  <>
+                    <p className="px-3 py-1.5 text-xs text-[var(--text-faint)] font-mono truncate border-b border-[var(--border)] mb-1">
+                      {userName}
+                    </p>
+                  </>
+                )}
+                <button
+                  onClick={() => toggleTheme()}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--text)] transition-colors text-left"
+                >
+                  {theme === "dark" ? <MoonIcon size={15} /> : <SunIcon size={15} />}
+                  {theme === "dark" ? "Mode nuit" : "Mode jour"}
+                </button>
 
-          {/* Settings */}
-          <button
-            onClick={() => setShowSettings(true)}
-            title="Paramètres"
-            className="w-7 h-7 flex items-center justify-center text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors rounded"
-          >
-            <SettingsIcon size={17} />
-          </button>
+                {/* Palette de couleurs */}
+                <div className="px-3 py-2 flex flex-col gap-1.5">
+                  <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">Palette</p>
+                  <div className="flex gap-1.5">
+                    {ACCENTS.map((a) => (
+                      <button
+                        key={a.id}
+                        onClick={() => setAccent(a.id)}
+                        title={a.label}
+                        className="w-5 h-5 rounded-full border-2 transition-all hover:scale-110 shrink-0"
+                        style={{
+                          backgroundColor: theme === "dark" ? a.dark : a.light,
+                          borderColor: accent === a.id ? "var(--text)" : "transparent",
+                          boxShadow: accent === a.id ? "0 0 0 1px var(--surface-3)" : "none",
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
 
-          {/* Lock */}
-          <button
-            onClick={handleLock}
-            title="Verrouiller"
-            className="w-7 h-7 flex items-center justify-center text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors rounded"
-          >
-            <LockIcon />
-          </button>
+                <button
+                  onClick={() => { setShowSettings(true); setShowUserMenu(false); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--text)] transition-colors text-left"
+                >
+                  <SettingsIcon size={15} />
+                  Paramètres
+                </button>
+                <div className="border-t border-[var(--border)] my-1" />
+                <button
+                  onClick={() => { handleLock(); setShowUserMenu(false); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--text-faint)] hover:bg-[var(--surface-3)] hover:text-[var(--danger)] transition-colors text-left"
+                >
+                  <LockIcon size={15} />
+                  Verrouiller
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -199,7 +244,7 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
                 <span className="ml-auto w-1 h-1 rounded-full bg-[var(--accent)]" />
               )}
               {id === "calendar" && view === "calendar" && (
-                <span className="ml-auto text-[10px] text-[var(--text-faint)]">▾</span>
+                <span className="ml-auto text-[var(--text-faint)] flex items-center"><ChevronDownIcon size={11} /></span>
               )}
             </button>
 
@@ -247,7 +292,7 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
           <DragOverlay dropAnimation={null}>
             {draggedPage && (
               <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-[var(--surface-3)] border border-[var(--accent)] text-[var(--text)] text-sm shadow-xl opacity-90 max-w-[280px]">
-                <span className="text-xs">{draggedPage.isFolder ? "📁" : "▪"}</span>
+                <span className="flex items-center opacity-70">{draggedPage.isFolder ? <FolderIcon size={14} /> : <FileIcon size={14} />}</span>
                 <span className="truncate">{draggedPage.title}</span>
               </div>
             )}
@@ -256,16 +301,16 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
 
           <div className="p-3 border-t border-[var(--border)] flex flex-col gap-1">
             <button
-              onClick={() => newPage()}
+              onClick={async () => { await newPage(); toast.success("Page créée"); }}
               className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-base text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors"
             >
-              <span className="text-[var(--accent)]">+</span> Nouvelle page
+              <span className="text-[var(--accent)] flex items-center"><PlusIcon size={13} /></span> Nouvelle page
             </button>
             <button
-              onClick={() => newFolder()}
+              onClick={async () => { await newFolder(); toast.success("Dossier créé"); }}
               className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-base text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors"
             >
-              <span className="text-[var(--accent)]">⊞</span> Nouveau dossier
+              <span className="text-[var(--accent)] flex items-center"><FolderPlusIcon size={14} /></span> Nouveau dossier
             </button>
           </div>
         </>
@@ -288,12 +333,23 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
         </button>
       </div>
 
-      {/* Footer — version */}
-      <div className="px-4 py-2 border-t border-[var(--border)] flex items-center justify-between">
-        <p className="text-[10px] text-[var(--text-faint)] font-mono">
-          ROOT <span className="opacity-40">·</span> v1.0
-        </p>
-        <p className="text-[10px] text-[var(--text-faint)] opacity-40 font-mono">
+      {/* Footer — version + aide */}
+      <div className="px-4 py-2 border-t border-[var(--border)] flex items-center gap-1.5">
+        <button
+          onClick={() => setShowChangelog(true)}
+          className="text-[10px] text-[var(--text-faint)] font-mono hover:text-[var(--text-muted)] transition-colors"
+          title="Voir le changelog"
+        >
+          ROOT <span className="opacity-40">·</span> v{APP_VERSION}
+        </button>
+        <button
+          onClick={() => setShowHelp(true)}
+          title="Aide — Gen"
+          className="w-5 h-5 flex items-center justify-center text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors rounded text-[10px] font-bold font-mono"
+        >
+          ?
+        </button>
+        <p className="ml-auto text-[10px] text-[var(--text-faint)] opacity-40 font-mono">
           zero-knowledge
         </p>
       </div>
@@ -319,6 +375,23 @@ function PageNode({
   const [expanded, setExpanded] = useState(true);
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(page.title);
+
+  async function handleDeletePage() {
+    await deletePage(page.id);
+    toast("Page supprimée", { description: page.title });
+  }
+
+  async function handleNewSubPage() {
+    await newPage("Nouvelle page", page.id);
+    setExpanded(true);
+    toast.success("Page créée");
+  }
+
+  async function handleNewSubFolder() {
+    await newFolder("Nouveau dossier", page.id);
+    setExpanded(true);
+    toast.success("Dossier créé");
+  }
 
   // ── Drag (handle uniquement) ───────────────────────────────────────────────
   const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
@@ -360,6 +433,7 @@ function PageNode({
   }
 
   return (
+    <ContextMenu>
     <div ref={setDropRef} className="relative">
       {/* Indicateur AVANT */}
       {showBefore && (
@@ -369,6 +443,7 @@ function PageNode({
       {showAfter && (
         <div className="absolute bottom-0 left-3 right-2 h-0.5 bg-[var(--accent)] rounded z-20 pointer-events-none" />
       )}
+      <ContextMenuTrigger asChild>
       <div
         className={[
           "group flex items-center gap-1 px-2 py-0.5 mx-1 rounded-md cursor-pointer text-base transition-colors",
@@ -390,18 +465,18 @@ function PageNode({
           className="w-4 h-4 flex items-center justify-center text-[var(--text-faint)] opacity-0 group-hover:opacity-60 hover:!opacity-100 shrink-0 cursor-grab active:cursor-grabbing transition-opacity"
           title="Déplacer"
         >
-          ⠿
+          <GripIcon size={14} />
         </span>
 
         <button
           onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
           className="w-4 h-4 flex items-center justify-center text-[var(--text-faint)] hover:text-[var(--text-muted)] shrink-0 text-xs"
         >
-          {children.length > 0 ? (expanded ? "▾" : "▸") : " "}
+          {children.length > 0 ? (expanded ? <ChevronDownIcon size={11} /> : <ChevronRightIcon size={11} />) : null}
         </button>
 
-        <span className="text-xs opacity-70 mr-0.5">
-          {isFolder ? (expanded ? "📂" : "📁") : (page.icon ?? "▪")}
+        <span className="opacity-70 mr-0.5 flex items-center">
+          {isFolder ? (expanded ? <FolderOpenIcon size={14} /> : <FolderIcon size={14} />) : <FileIcon size={14} />}
         </span>
 
         {isRenaming ? (
@@ -422,14 +497,15 @@ function PageNode({
         )}
 
         <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
-          <ActionBtn title="Renommer" onClick={(e) => { e.stopPropagation(); setIsRenaming(true); setRenameValue(page.title); }}>✎</ActionBtn>
-          <ActionBtn title={isFolder ? "Nouvelle page dans ce dossier" : "Sous-page"} onClick={(e) => { e.stopPropagation(); newPage("Nouvelle page", page.id); setExpanded(true); }}>+</ActionBtn>
+          <ActionBtn title="Renommer" onClick={(e) => { e.stopPropagation(); setIsRenaming(true); setRenameValue(page.title); }}><PencilIcon size={12} /></ActionBtn>
+          <ActionBtn title={isFolder ? "Nouvelle page dans ce dossier" : "Sous-page"} onClick={(e) => { e.stopPropagation(); handleNewSubPage(); }}><PlusIcon size={12} /></ActionBtn>
           {isFolder && (
-            <ActionBtn title="Sous-dossier" onClick={(e) => { e.stopPropagation(); newFolder("Nouveau dossier", page.id); setExpanded(true); }}>⊞</ActionBtn>
+            <ActionBtn title="Sous-dossier" onClick={(e) => { e.stopPropagation(); handleNewSubFolder(); }}><FolderPlusIcon size={12} /></ActionBtn>
           )}
-          <ActionBtn title="Supprimer" onClick={(e) => { e.stopPropagation(); deletePage(page.id); }}>✕</ActionBtn>
+          <ActionBtn title="Supprimer" onClick={(e) => { e.stopPropagation(); handleDeletePage(); }}><XIcon size={12} /></ActionBtn>
         </div>
       </div>
+      </ContextMenuTrigger>
 
       {expanded && children.map((child) => (
         <PageNode
@@ -444,6 +520,27 @@ function PageNode({
         />
       ))}
     </div>
+
+    <ContextMenuContent>
+      <ContextMenuLabel><span className="flex items-center gap-1">{isFolder ? <FolderIcon size={12} /> : <FileIcon size={12} />} {page.title}</span></ContextMenuLabel>
+      <ContextMenuSeparator />
+      <ContextMenuItem onClick={() => { setIsRenaming(true); setRenameValue(page.title); }}>
+        <PencilIcon size={13} /> Renommer
+      </ContextMenuItem>
+      <ContextMenuItem onClick={handleNewSubPage}>
+        <PlusIcon size={13} /> Nouvelle page ici
+      </ContextMenuItem>
+      {isFolder && (
+        <ContextMenuItem onClick={handleNewSubFolder}>
+          <FolderPlusIcon size={13} /> Nouveau sous-dossier
+        </ContextMenuItem>
+      )}
+      <ContextMenuSeparator />
+      <ContextMenuItem danger onClick={handleDeletePage}>
+        <XIcon size={13} /> Supprimer
+      </ContextMenuItem>
+    </ContextMenuContent>
+    </ContextMenu>
   );
 }
 
@@ -494,7 +591,7 @@ function CategoriesSubNav({
           onClick={() => { setCreating((v) => !v); setNewName(""); }}
           className="text-[var(--accent)] hover:text-[var(--accent-hover)] text-sm leading-none"
           title="Nouvelle catégorie"
-        >+</button>
+        ><PlusIcon size={14} /></button>
       </div>
 
       {/* Formulaire création */}
@@ -522,7 +619,7 @@ function CategoriesSubNav({
             <button onClick={handleCreate} className="flex-1 text-[11px] py-0.5 rounded bg-[var(--accent)] text-white hover:opacity-90 transition-opacity">
               Créer
             </button>
-            <button onClick={() => setCreating(false)} className="text-[11px] px-2 text-[var(--text-faint)] hover:text-[var(--text-muted)]">✕</button>
+            <button onClick={() => setCreating(false)} className="flex items-center px-2 text-[var(--text-faint)] hover:text-[var(--text-muted)]"><XIcon size={11} /></button>
           </div>
         </div>
       )}
@@ -634,12 +731,12 @@ function CategoriesSubNav({
                 onClick={(e) => { e.stopPropagation(); setEditingId(cat.id); setEditName(cat.name); }}
                 className="w-4 h-4 flex items-center justify-center text-[10px] text-[var(--text-faint)] hover:text-[var(--accent)] rounded"
                 title="Renommer"
-              >✎</button>
+              ><PencilIcon size={11} /></button>
               <button
                 onClick={(e) => { e.stopPropagation(); if (confirm(`Supprimer "${cat.name}" ?`)) deleteCategory(cat.id); }}
                 className="w-4 h-4 flex items-center justify-center text-[10px] text-[var(--text-faint)] hover:text-[var(--danger)] rounded"
                 title="Supprimer"
-              >✕</button>
+              ><XIcon size={11} /></button>
             </div>
           </div>
         </div>
@@ -727,9 +824,9 @@ function SettingsIcon({ size = 15 }: { size?: number }) {
   );
 }
 
-function LockIcon() {
+function LockIcon({ size = 16 }: { size?: number }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <rect x="3" y="11" width="18" height="11" rx="2"/>
       <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
@@ -737,9 +834,9 @@ function LockIcon() {
   );
 }
 
-function SunIcon() {
+function SunIcon({ size = 16 }: { size?: number }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <circle cx="12" cy="12" r="4"/>
       <line x1="12" y1="2" x2="12" y2="4"/>
@@ -754,9 +851,9 @@ function SunIcon() {
   );
 }
 
-function MoonIcon() {
+function MoonIcon({ size = 16 }: { size?: number }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
     </svg>

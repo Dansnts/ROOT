@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useCalendarStore, type StoreEvent, UNCATEGORIZED_ID } from "@/stores/calendarStore";
 import { useCategoriesStore } from "@/stores/categoriesStore";
+import { ArrowLeftIcon, TrashIcon, ArrowRightIcon, ArrowsRightLeftIcon, XIcon } from "@/components/ui/icons";
 import { KANBAN_PAGE_ID } from "@/lib/constants";
 
 interface Props {
@@ -74,7 +75,7 @@ export default function CategoryDetailView({ categoryId, onBack }: Props) {
           onClick={onBack}
           className="flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
         >
-          <span>←</span> Retour
+          <ArrowLeftIcon size={14} /> Retour
         </button>
         <div className="w-px h-4 bg-[var(--border)]" />
         {category && (
@@ -93,9 +94,9 @@ export default function CategoryDetailView({ categoryId, onBack }: Props) {
                 await deleteEventLocal(ev.id);
               }
             }}
-            className="text-xs px-2 py-1 rounded-lg border border-[var(--border)] text-[var(--text-faint)] hover:text-[var(--danger)] hover:border-[var(--danger)] transition-colors shrink-0"
+            className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg border border-[var(--border)] text-[var(--text-faint)] hover:text-[var(--danger)] hover:border-[var(--danger)] transition-colors shrink-0"
           >
-            🗑 Tout supprimer
+            <TrashIcon size={14} /> Tout supprimer
           </button>
         )}
       </div>
@@ -146,7 +147,7 @@ export default function CategoryDetailView({ categoryId, onBack }: Props) {
                         </p>
                         <p className="text-xs text-[var(--text-faint)]">
                           {dayLabel(ev.start)}
-                          {ev.end && ev.end !== ev.start && ` → ${dayLabel(ev.end)}`}
+                          {ev.end && ev.end !== ev.start && <> <ArrowRightIcon size={12} /> {dayLabel(ev.end)}</>}
                           {ev.location && ` · ${ev.location}`}
                         </p>
                       </div>
@@ -160,10 +161,10 @@ export default function CategoryDetailView({ categoryId, onBack }: Props) {
                         {isUncategorized && categories.length > 0 && (
                           <button
                             onClick={() => setReassignId(reassignId === ev.id ? null : ev.id)}
-                            className="text-[10px] px-1.5 py-0.5 rounded border border-[var(--border)] text-[var(--text-faint)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition-colors"
+                            className="flex items-center px-1.5 py-0.5 rounded border border-[var(--border)] text-[var(--text-faint)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition-colors"
                             title="Assigner à une catégorie"
                           >
-                            ⇄
+                            <ArrowsRightLeftIcon size={12} />
                           </button>
                         )}
                         {/* Supprimer */}
@@ -175,10 +176,10 @@ export default function CategoryDetailView({ categoryId, onBack }: Props) {
                               if (confirm(`Supprimer "${ev.title}" ?`)) await deleteEvent(ev.id);
                             }
                           }}
-                          className="text-[10px] px-1.5 py-0.5 rounded border border-[var(--border)] text-[var(--text-faint)] hover:text-[var(--danger)] hover:border-[var(--danger)] transition-colors"
+                          className="flex items-center px-1.5 py-0.5 rounded border border-[var(--border)] text-[var(--text-faint)] hover:text-[var(--danger)] hover:border-[var(--danger)] transition-colors"
                           title="Supprimer"
                         >
-                          ✕
+                          <XIcon size={12} />
                         </button>
                       </div>
                     </div>

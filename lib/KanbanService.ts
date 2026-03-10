@@ -47,7 +47,7 @@ export async function loadAllTasks(): Promise<KanbanTask[]> {
   const blocks = await db.blocks
     .where("type")
     .equals("task")
-    .filter((b: BlockRecord) => !b.isDeleted)
+    .filter((b: BlockRecord) => !b.isDeleted && b.pageId === KANBAN_PAGE_ID)
     .toArray();
 
   const tasks = await Promise.all(

@@ -15,6 +15,7 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { useTagsStore } from "@/stores/tagsStore";
 import EventModal from "./EventModal";
 import { COLOR_PALETTE } from "@/lib/constants";
+import { TrashIcon, XIcon, RefreshIcon } from "@/components/ui/icons";
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -111,7 +112,7 @@ export default function CalendarView() {
   const syncLabel = (() => {
     if (syncStatus === "syncing") return "Synchronisation…";
     if (syncStatus === "error")   return "Erreur de sync";
-    if (syncStatus === "success") return "Synchronisé ✓";
+    if (syncStatus === "success") return "Synchronisé";
     if (lastSyncAt) return `Sync : ${new Date(lastSyncAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`;
     return null;
   })();
@@ -168,15 +169,15 @@ export default function CalendarView() {
                     <div className="border-t border-[var(--border)] pt-2 mt-1 flex flex-col gap-0.5">
                       <button
                         onClick={() => handleClearCategory(cat.id)}
-                        className="w-full text-left text-[10px] text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors py-1 px-1 rounded hover:bg-red-900/20"
+                        className="w-full text-left text-[10px] text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors py-1 px-1 rounded hover:bg-red-900/20 flex items-center gap-1.5"
                       >
-                        🗑 Vider la catégorie
+                        <TrashIcon size={12} /> Vider la catégorie
                       </button>
                       <button
                         onClick={() => handleRemoveCategory(cat.id)}
-                        className="w-full text-left text-[10px] text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors py-1 px-1 rounded hover:bg-red-900/20"
+                        className="w-full text-left text-[10px] text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors py-1 px-1 rounded hover:bg-red-900/20 flex items-center gap-1.5"
                       >
-                        ✕ Supprimer la catégorie
+                        <XIcon size={12} /> Supprimer la catégorie
                       </button>
                     </div>
                   </div>
@@ -196,10 +197,10 @@ export default function CalendarView() {
             <button
               onClick={() => sync()}
               disabled={syncStatus === "syncing"}
-              className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors disabled:opacity-40"
+              className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors disabled:opacity-40"
               title="Synchroniser maintenant"
             >
-              ↻ Sync
+              <RefreshIcon size={13} /> Sync
             </button>
           )}
           <button
@@ -221,7 +222,7 @@ export default function CalendarView() {
           headerToolbar={{
             left:   "prev,next today",
             center: "title",
-            right:  "dayGridMonth,listMonth",
+            right:  "dayGridMonth,timeGridDay,listMonth",
           }}
           events={fcEvents}
           editable={true}

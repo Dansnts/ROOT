@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { XIcon, RefreshIcon, CheckIcon } from "@/components/ui/icons";
 import { RELEASES, APP_VERSION, type ReleaseType } from "@/lib/changelog";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useCategoriesStore } from "@/stores/categoriesStore";
@@ -34,14 +35,14 @@ export default function SettingsModal({ onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-10 bg-black/20 backdrop-blur-[2px]"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-[54rem] bg-[var(--surface-2)] border border-[var(--border-light)] rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+      <div className="w-full max-w-[54rem] bg-[var(--surface-2)] border border-[var(--border-light)] rounded-2xl shadow-2xl flex flex-col overflow-hidden h-[82vh]">
         {/* Header */}
         <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)] shrink-0">
           <h2 className="text-sm font-semibold text-[var(--text)]">Paramètres</h2>
-          <button onClick={onClose} className="ml-auto text-[var(--text-faint)] hover:text-[var(--text-muted)]">✕</button>
+          <button onClick={onClose} className="ml-auto text-[var(--text-faint)] hover:text-[var(--text-muted)] flex items-center justify-center w-6 h-6"><XIcon /></button>
         </div>
 
         {/* Tabs */}
@@ -120,8 +121,8 @@ function ProfilTab({ userName, onSave }: { userName: string | null; onSave: (n: 
             className={inputCls}
           />
         </Field>
-        <button type="submit" className={btnCls}>
-          {saved ? "✓ Sauvegardé" : "Sauvegarder"}
+        <button type="submit" className={`${btnCls} flex items-center gap-1.5`}>
+          {saved ? <><CheckIcon size={13} /> Sauvegardé</> : "Sauvegarder"}
         </button>
       </form>
     </div>
@@ -235,8 +236,8 @@ function CalDAVTab({
       {/* Discover button */}
       <div className="flex gap-2">
         <button onClick={handleTest}     disabled={busy} className={btnCls}>Tester</button>
-        <button onClick={handleDiscover} disabled={busy} className={`${btnCls} border-[var(--accent-hover)]`}>
-          ↻ Découvrir les calendriers
+        <button onClick={handleDiscover} disabled={busy} className={`${btnCls} border-[var(--accent-hover)] flex items-center gap-1.5`}>
+          <RefreshIcon size={13} /> Découvrir les calendriers
         </button>
       </div>
 
@@ -345,7 +346,7 @@ function CalendarEntryRow({
             className="flex-1 text-xs bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2 py-1 text-[var(--text)] outline-none focus:border-[var(--accent)]"
           />
           <button onClick={handleCreateAndAssign} className="text-xs px-2 py-1 rounded-lg bg-[var(--surface-2)] border border-[var(--border-light)] text-[var(--accent)] hover:border-[var(--accent)]">OK</button>
-          <button onClick={() => setCreating(false)} className="text-xs text-[var(--text-faint)]">✕</button>
+          <button onClick={() => setCreating(false)} className="text-[var(--text-faint)] flex items-center justify-center w-5 h-5"><XIcon size={12} /></button>
         </div>
       )}
 

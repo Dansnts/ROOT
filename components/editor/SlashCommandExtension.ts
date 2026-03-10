@@ -1,13 +1,14 @@
 import { Extension } from "@tiptap/core";
 import Suggestion, { type SuggestionOptions } from "@tiptap/suggestion";
-import { type Editor } from "@tiptap/react";
-import { ReactRenderer } from "@tiptap/react";
+import { type Editor, ReactRenderer } from "@tiptap/react";
+import React, { type ReactNode } from "react";
 import tippy, { type Instance as TippyInstance } from "tippy.js";
 import SlashMenu from "./SlashMenu";
+import { CheckSquareIcon, ImageIcon, TableIcon } from "@/components/ui/icons";
 
 export interface SlashCommandItem {
   title: string;
-  icon: string;
+  icon: ReactNode;
   description: string;
   command: (editor: Editor) => void;
 }
@@ -63,7 +64,7 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
   },
   {
     title: "Cases à cocher",
-    icon: "☑",
+    icon: React.createElement(CheckSquareIcon, { size: 14 }),
     description: "Liste de tâches",
     command: (e) => e.chain().focus().toggleTaskList().run(),
   },
@@ -87,7 +88,7 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
   },
   {
     title: "Tableau",
-    icon: "⊞",
+    icon: React.createElement(TableIcon, { size: 14 }),
     description: "Tableau taille personnalisée",
     command: (e) => {
       document.dispatchEvent(new CustomEvent("tiptap-open-table-picker", { detail: { editor: e } }));
@@ -95,7 +96,7 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
   },
   {
     title: "Image",
-    icon: "🖼",
+    icon: React.createElement(ImageIcon, { size: 14 }),
     description: "Image depuis une URL",
     command: (e) => {
       document.dispatchEvent(new CustomEvent("tiptap-open-image-picker", { detail: { editor: e } }));

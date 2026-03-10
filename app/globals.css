@@ -31,9 +31,9 @@
   --border:       rgba(160, 90, 20, 0.12);
   --border-light: rgba(160, 90, 20, 0.22);
 
-  --text:         #2e1c0a;
-  --text-muted:   rgba(46, 28, 10, 0.58);
-  --text-faint:   rgba(46, 28, 10, 0.35);
+  --text:         #1a1a1a;
+  --text-muted:   rgba(26, 26, 26, 0.55);
+  --text-faint:   rgba(26, 26, 26, 0.32);
 
   --accent:       #c05e00;
   --accent-hover: #943f00;
@@ -76,8 +76,134 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
 
 /* ── Selection ────────────────────────────────────────────────────────────── */
-::selection { background: rgba(74, 222, 128, 0.2); }
-[data-theme="light"] ::selection { background: rgba(192, 94, 0, 0.18); }
+::selection { background: rgba(var(--accent-rgb) / 0.2); }
+
+/* ── Accent palettes ─────────────────────────────────────────────────────── */
+/* Les sélecteurs [data-accent] viennent APRÈS [data-theme] pour gagner la cascade */
+
+/* ── Dark mode : surfaces tintées + accent par palette ───────────────────── */
+
+[data-theme="dark"][data-accent="vert"] {
+  --bg:           #080f0b;
+  --surface:      #0e1812;
+  --surface-2:    #152019;
+  --surface-3:    #1c2a20;
+  --accent:       #4ade80;
+  --accent-hover: #86efac;
+  --accent-rgb:   74 222 128;
+  --border:       rgba(74, 222, 128, 0.09);
+  --border-light: rgba(74, 222, 128, 0.18);
+}
+
+[data-theme="dark"][data-accent="bleu"] {
+  --bg:           #08090f;
+  --surface:      #0d1018;
+  --surface-2:    #141720;
+  --surface-3:    #1c1f2a;
+  --accent:       #60a5fa;
+  --accent-hover: #93c5fd;
+  --accent-rgb:   96 165 250;
+  --border:       rgba(96, 165, 250, 0.09);
+  --border-light: rgba(96, 165, 250, 0.18);
+}
+
+[data-theme="dark"][data-accent="violet"] {
+  --bg:           #09080f;
+  --surface:      #120e18;
+  --surface-2:    #181522;
+  --surface-3:    #201c2c;
+  --accent:       #a78bfa;
+  --accent-hover: #c4b5fd;
+  --accent-rgb:   167 139 250;
+  --border:       rgba(167, 139, 250, 0.09);
+  --border-light: rgba(167, 139, 250, 0.18);
+}
+
+[data-theme="dark"][data-accent="rose"] {
+  --bg:           #0f0809;
+  --surface:      #180d10;
+  --surface-2:    #211318;
+  --surface-3:    #2a1920;
+  --accent:       #fb7185;
+  --accent-hover: #fda4af;
+  --accent-rgb:   251 113 133;
+  --border:       rgba(251, 113, 133, 0.09);
+  --border-light: rgba(251, 113, 133, 0.18);
+}
+
+[data-theme="dark"][data-accent="ambre"] {
+  --bg:           #0f0e08;
+  --surface:      #181608;
+  --surface-2:    #201e0e;
+  --surface-3:    #282614;
+  --accent:       #fbbf24;
+  --accent-hover: #fcd34d;
+  --accent-rgb:   251 191 36;
+  --border:       rgba(251, 191, 36, 0.09);
+  --border-light: rgba(251, 191, 36, 0.18);
+}
+
+[data-theme="dark"][data-accent="ciel"] {
+  --bg:           #08100f;
+  --surface:      #0e1817;
+  --surface-2:    #14201f;
+  --surface-3:    #1a2a29;
+  --accent:       #22d3ee;
+  --accent-hover: #67e8f9;
+  --accent-rgb:   34 211 238;
+  --border:       rgba(34, 211, 238, 0.09);
+  --border-light: rgba(34, 211, 238, 0.18);
+}
+
+/* ── Light mode : accent uniquement (surfaces crème inchangées) ──────────── */
+
+[data-theme="light"][data-accent="vert"] {
+  --accent:       #16a34a;
+  --accent-hover: #15803d;
+  --accent-rgb:   22 163 74;
+  --border:       rgba(22, 163, 74, 0.12);
+  --border-light: rgba(22, 163, 74, 0.22);
+}
+
+[data-theme="light"][data-accent="bleu"] {
+  --accent:       #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-rgb:   37 99 235;
+  --border:       rgba(37, 99, 235, 0.10);
+  --border-light: rgba(37, 99, 235, 0.20);
+}
+
+[data-theme="light"][data-accent="violet"] {
+  --accent:       #7c3aed;
+  --accent-hover: #6d28d9;
+  --accent-rgb:   124 58 237;
+  --border:       rgba(124, 58, 237, 0.10);
+  --border-light: rgba(124, 58, 237, 0.20);
+}
+
+[data-theme="light"][data-accent="rose"] {
+  --accent:       #e11d48;
+  --accent-hover: #be123c;
+  --accent-rgb:   225 29 72;
+  --border:       rgba(225, 29, 72, 0.10);
+  --border-light: rgba(225, 29, 72, 0.20);
+}
+
+[data-theme="light"][data-accent="ambre"] {
+  --accent:       #d97706;
+  --accent-hover: #b45309;
+  --accent-rgb:   217 119 6;
+  --border:       rgba(217, 119, 6, 0.10);
+  --border-light: rgba(217, 119, 6, 0.20);
+}
+
+[data-theme="light"][data-accent="ciel"] {
+  --accent:       #0891b2;
+  --accent-hover: #0e7490;
+  --accent-rgb:   8 145 178;
+  --border:       rgba(8, 145, 178, 0.10);
+  --border-light: rgba(8, 145, 178, 0.20);
+}
 
 /* ── TipTap Editor ────────────────────────────────────────────────────────── */
 .tiptap {
@@ -209,6 +335,11 @@ body {
   --fc-button-text-color:         var(--text-muted);
   font-size: 0.875rem;
 }
+/* Centrage réel du titre : les deux colonnes gauche/droite prennent la même largeur */
+.root-calendar .fc-header-toolbar { position: relative; }
+.root-calendar .fc-header-toolbar .fc-toolbar-chunk:first-child,
+.root-calendar .fc-header-toolbar .fc-toolbar-chunk:last-child { flex: 1; }
+.root-calendar .fc-header-toolbar .fc-toolbar-chunk:last-child { display: flex; justify-content: flex-end; }
 .root-calendar .fc-toolbar-title { font-size: 1rem; font-weight: 600; color: var(--text); }
 .root-calendar .fc-col-header-cell-cushion { color: var(--text-muted); font-weight: 500; }
 .root-calendar .fc-daygrid-day-number { color: var(--text-muted); font-size: 0.8rem; }

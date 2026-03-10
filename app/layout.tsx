@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Pixelify_Sans } from "next/font/google";
 import { Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
 
 const pixelifySans = Pixelify_Sans({
   variable: "--font-pixelify",
@@ -42,6 +43,7 @@ export default function RootLayout({
       </head>
       <body className={`${pixelifySans.variable} ${geistMono.variable} antialiased`}>
         {children}
+        <Toaster />
       </body>
     </html>
   );

@@ -5,6 +5,10 @@ import { useCalendarStore, type StoreEvent } from "@/stores/calendarStore";
 import { useCategoriesStore } from "@/stores/categoriesStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useTagsStore } from "@/stores/tagsStore";
+import { Drawer, DrawerContent, DrawerClose } from "@/components/ui/drawer";
+import { Calendar, dateFromStr, strFromDate } from "@/components/ui/calendar";
+import { toast } from "@/components/ui/sonner";
+import { ArrowsUpDownIcon, XIcon, CalendarDaysIcon } from "@/components/ui/icons";
 
 interface Props {
   initialDate?: string;
@@ -24,12 +28,10 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
 
   const isEdit = !!event;
 
-  // Calendriers CalDAV indexés par categoryId
   const calByCategoryId = new Map(
     (caldav?.calendars ?? []).map((c) => [c.categoryId, c])
   );
 
-  // Catégorie courante de l'événement en édition
   const defaultCategoryId = isEdit
     ? event.categoryId
     : (categories[0]?.id ?? "");
@@ -42,6 +44,9 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
   const [categoryId,  setCategoryId]  = useState<string>(defaultCategoryId);
   const [saving,      setSaving]      = useState(false);
   const [deleting,    setDeleting]    = useState(false);
+
+  const [showStartCal, setShowStartCal] = useState(false);
+  const [showEndCal,   setShowEndCal]   = useState(false);
 
   const selectedEntry = calByCategoryId.get(categoryId);
 
@@ -61,8 +66,10 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
         if (categoryId !== event.categoryId) {
           await moveEventToCategory(event.id, categoryId);
         }
+        toast.success("Événement enregistré");
       } else {
         await createEvent(data, categoryId, selectedEntry);
+        toast.success("Événement créé");
       }
       onClose();
     } finally {
@@ -75,152 +82,208 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
     setDeleting(true);
     try {
       await deleteEvent(event.id);
+      toast("Événement supprimé", { description: event.title });
       onClose();
     } finally {
       setDeleting(false);
     }
   }
 
+  function dateDisplay(str: string) {
+    if (!str) return null;
+    return new Date(str + "T00:00:00").toLocaleDateString("fr-FR", {
+      day: "numeric", month: "long", year: "numeric",
+    });
+  }
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="w-full max-w-md bg-[var(--surface-2)] border border-[var(--border-light)] rounded-2xl shadow-2xl p-6 flex flex-col gap-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-widest">
-            {isEdit ? "Modifier l'événement" : "Nouvel événement"}
-          </h3>
-          <div className="flex items-center gap-2">
-            {event?.synced && (
-              <span className="text-xs text-[var(--accent-hover)] bg-[var(--surface-3)] px-2 py-0.5 rounded-full">
-                ↕ CalDAV
-              </span>
+    <Drawer open onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DrawerContent>
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] shrink-0">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-widest">
+                {isEdit ? "Modifier l'événement" : "Nouvel événement"}
+              </h3>
+              {event?.synced && (
+                <span className="flex items-center gap-1 text-xs text-[var(--accent-hover)] bg-[var(--surface-3)] px-2 py-0.5 rounded-full">
+                  <ArrowsUpDownIcon size={12} /> CalDAV
+                </span>
+              )}
+              {event && !event.synced && caldav && (
+                <span className="text-xs text-[var(--text-faint)] bg-[var(--surface-3)] px-2 py-0.5 rounded-full">
+                  local
+                </span>
+              )}
+            </div>
+            <DrawerClose
+              onClick={onClose}
+              className="text-[var(--text-faint)] hover:text-[var(--text-muted)] text-sm w-7 h-7 flex items-center justify-center rounded hover:bg-[var(--surface-3)] transition-colors"
+            >
+              <XIcon size={14} />
+            </DrawerClose>
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+            {/* Tags (lecture seule) */}
+            {eventTagDefs.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {eventTagDefs.map((tag) => (
+                  <span
+                    key={tag.id}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs text-white font-medium"
+                    style={{ backgroundColor: tag.color }}
+                  >
+                    {tag.name}
+                  </span>
+                ))}
+              </div>
             )}
-            {event && !event.synced && caldav && (
-              <span className="text-xs text-[var(--text-faint)] bg-[var(--surface-3)] px-2 py-0.5 rounded-full">
-                local
-              </span>
-            )}
-            <button onClick={onClose} className="text-[var(--text-faint)] hover:text-[var(--text-muted)]">✕</button>
-          </div>
-        </div>
 
-        {/* Tags (lecture seule — assignés depuis le Kanban) */}
-        {eventTagDefs.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {eventTagDefs.map((tag) => (
-              <span
-                key={tag.id}
-                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs text-white font-medium"
-                style={{ backgroundColor: tag.color }}
-              >
-                {tag.name}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Titre */}
-        <input
-          autoFocus
-          value={summary}
-          onChange={(e) => setSummary(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
-          placeholder="Titre de l'événement"
-          className={inputCls}
-        />
-
-        {/* Dates */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label className={labelCls}>Date de début *</label>
+            {/* Titre */}
             <input
-              type="date"
-              value={dtstart}
-              onChange={(e) => setDtstart(e.target.value)}
-              className={`${inputCls} [color-scheme:dark]`}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className={labelCls}>Date de fin</label>
-            <input
-              type="date"
-              value={dtend}
-              min={dtstart}
-              onChange={(e) => setDtend(e.target.value)}
-              className={`${inputCls} [color-scheme:dark]`}
-            />
-          </div>
-        </div>
-
-        {/* Description */}
-        <div className="flex flex-col gap-1.5">
-          <label className={labelCls}>Description</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={2}
-            placeholder="Notes…"
-            className={`${inputCls} resize-none`}
-          />
-        </div>
-
-        {/* Lieu */}
-        <div className="flex flex-col gap-1.5">
-          <label className={labelCls}>Lieu</label>
-          <input
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder="Salle, adresse…"
-            className={inputCls}
-          />
-        </div>
-
-        {/* Catégorie */}
-        {categories.length > 0 && (
-          <div className="flex flex-col gap-1.5">
-            <label className={labelCls}>Catégorie</label>
-            <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
+              autoFocus
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
+              placeholder="Titre de l'événement"
               className={inputCls}
-            >
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
+            />
 
-        {/* Actions */}
-        <div className="flex gap-2 pt-1">
-          {isEdit && (
+            {/* Date début */}
+            <div className="flex flex-col gap-1.5">
+              <label className={labelCls}>Date de début *</label>
+              <button
+                type="button"
+                onClick={() => { setShowStartCal((v) => !v); setShowEndCal(false); }}
+                className={`${inputCls} text-left flex items-center gap-2`}
+              >
+                <span className="text-[var(--text-faint)]"><CalendarDaysIcon size={14} /></span>
+                <span className={dateDisplay(dtstart) ? "text-[var(--text)]" : "text-[var(--text-faint)]"}>
+                  {dateDisplay(dtstart) ?? "Choisir une date…"}
+                </span>
+              </button>
+              {showStartCal && (
+                <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--surface-3)]">
+                  <Calendar
+                    mode="single"
+                    selected={dateFromStr(dtstart)}
+                    onSelect={(date) => {
+                      setDtstart(date ? strFromDate(date) : "");
+                      setShowStartCal(false);
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Date fin */}
+            <div className="flex flex-col gap-1.5">
+              <label className={labelCls}>Date de fin</label>
+              <button
+                type="button"
+                onClick={() => { setShowEndCal((v) => !v); setShowStartCal(false); }}
+                className={`${inputCls} text-left flex items-center gap-2`}
+              >
+                <span className="text-[var(--text-faint)]"><CalendarDaysIcon size={14} /></span>
+                <span className={dateDisplay(dtend) ? "text-[var(--text)]" : "text-[var(--text-faint)]"}>
+                  {dateDisplay(dtend) ?? "Optionnel…"}
+                </span>
+                {dtend && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setDtend(""); setShowEndCal(false); }}
+                    className="ml-auto text-[var(--text-faint)] hover:text-[var(--danger)] transition-colors"
+                  >
+                    <XIcon size={11} />
+                  </button>
+                )}
+              </button>
+              {showEndCal && (
+                <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--surface-3)]">
+                  <Calendar
+                    mode="single"
+                    selected={dateFromStr(dtend)}
+                    disabled={dtstart ? { before: dateFromStr(dtstart)! } : undefined}
+                    onSelect={(date) => {
+                      setDtend(date ? strFromDate(date) : "");
+                      setShowEndCal(false);
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Description */}
+            <div className="flex flex-col gap-1.5">
+              <label className={labelCls}>Description</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                placeholder="Notes…"
+                className={`${inputCls} resize-none`}
+              />
+            </div>
+
+            {/* Lieu */}
+            <div className="flex flex-col gap-1.5">
+              <label className={labelCls}>Lieu</label>
+              <input
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Salle, adresse…"
+                className={inputCls}
+              />
+            </div>
+
+            {/* Catégorie */}
+            {categories.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <label className={labelCls}>Catégorie</label>
+                <select
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                  className={inputCls}
+                >
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="flex gap-2 px-6 py-4 border-t border-[var(--border)] shrink-0">
+            {isEdit && (
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-4 py-2 rounded-lg text-sm text-[var(--danger)] hover:bg-red-900/20 transition-colors disabled:opacity-40"
+              >
+                {deleting ? "…" : "Supprimer"}
+              </button>
+            )}
             <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="px-4 py-2 rounded-lg text-sm text-[var(--danger)] hover:bg-red-900/20 transition-colors disabled:opacity-40"
+              onClick={onClose}
+              className="ml-auto px-4 py-2 rounded-lg text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] transition-colors"
             >
-              {deleting ? "…" : "Supprimer"}
+              Annuler
             </button>
-          )}
-          <button
-            onClick={onClose}
-            className="ml-auto px-4 py-2 rounded-lg text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] transition-colors"
-          >
-            Annuler
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || !summary.trim() || !dtstart}
-            className="px-4 py-2 rounded-lg text-sm bg-[var(--surface-3)] border border-[var(--border-light)] text-[var(--text)] hover:border-[var(--accent)] transition-colors disabled:opacity-40"
-          >
-            {saving ? "Sauvegarde…" : isEdit ? "Enregistrer" : selectedEntry ? "Créer et synchroniser" : "Créer"}
-          </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || !summary.trim() || !dtstart}
+              className="px-4 py-2 rounded-lg text-sm bg-[var(--surface-3)] border border-[var(--border-light)] text-[var(--text)] hover:border-[var(--accent)] transition-colors disabled:opacity-40"
+            >
+              {saving ? "Sauvegarde…" : isEdit ? "Enregistrer" : selectedEntry ? "Créer et synchroniser" : "Créer"}
+            </button>
+          </div>
         </div>
-      </div>
-    </div>
+      </DrawerContent>
+    </Drawer>
   );
 }
 

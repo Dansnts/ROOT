@@ -6,6 +6,7 @@ import { usePagesStore } from "@/stores/pagesStore";
 import { useKanbanStore } from "@/stores/kanbanStore";
 import type { TagDefinition } from "@/lib/database";
 import { COLOR_PALETTE as PALETTE } from "@/lib/constants";
+import { PencilIcon, XIcon, FolderOpenIcon, FileIcon, ArrowRightIcon, CheckIcon, WarningIcon } from "@/components/ui/icons";
 
 export default function TagsView() {
   const { tags, createTag, updateTag, deleteTag } = useTagsStore();
@@ -156,12 +157,12 @@ export default function TagsView() {
                       onClick={(e) => { e.stopPropagation(); openEdit(tag); }}
                       className="w-5 h-5 flex items-center justify-center text-[var(--text-faint)] hover:text-[var(--accent)] rounded text-xs transition-colors"
                       title="Modifier"
-                    >✎</button>
+                    ><PencilIcon size={13} /></button>
                     <button
                       onClick={(e) => { e.stopPropagation(); deleteTag(tag.id); if (selected === tag.id) setSelected(null); }}
-                      className="w-5 h-5 flex items-center justify-center text-[var(--text-faint)] hover:text-red-400 rounded text-xs transition-colors"
+                      className="w-5 h-5 flex items-center justify-center text-[var(--text-faint)] hover:text-red-400 rounded transition-colors"
                       title="Supprimer"
-                    >✕</button>
+                    ><XIcon size={13} /></button>
                   </div>
                 </div>
                 {/* Barre d'usage */}
@@ -215,7 +216,7 @@ export default function TagsView() {
                       >
                         {formatDate(task.dueDate!)}
                       </span>
-                      {isPast(task.dueDate!) && <span className="text-xs text-red-400">⚠</span>}
+                      {isPast(task.dueDate!) && <WarningIcon size={13} className="text-red-400 shrink-0" />}
                       <span className="text-sm text-[var(--text)] truncate flex-1">{task.title}</span>
                     </div>
                   ))}
@@ -236,9 +237,9 @@ export default function TagsView() {
                       onClick={() => setActivePage(page.id)}
                       className="flex items-center gap-2 px-3 py-2 rounded-lg text-left hover:bg-[var(--surface-2)] transition-colors"
                     >
-                      <span className="text-xs opacity-60">{page.isFolder ? "📂" : "▪"}</span>
+                      <span className="opacity-60 text-[var(--text-faint)]">{page.isFolder ? <FolderOpenIcon size={14} /> : <FileIcon size={14} />}</span>
                       <span className="text-sm text-[var(--text)] flex-1 truncate">{page.title}</span>
-                      <span className="text-xs text-[var(--accent)] opacity-0 group-hover:opacity-100">→</span>
+                      <span className="text-[var(--accent)] opacity-0 group-hover:opacity-100"><ArrowRightIcon size={12} /></span>
                     </button>
                   ))}
                 </div>

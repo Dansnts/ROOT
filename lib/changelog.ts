@@ -9,7 +9,7 @@
  *   4. `git tag v<version>` puis `git push origin v<version>`
  */
 
-export const APP_VERSION = "1.0.3";
+export const APP_VERSION = "1.2.0";
 
 export type ReleaseType = "feat" | "fix" | "perf" | "chore";
 
@@ -25,6 +25,62 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.2.0",
+    date: "2026-03-09",
+    changes: [
+      {
+        type: "feat",
+        text: "Avatar utilisateur dans la sidebar : un bouton circulaire avec les initiales remplace les trois anciens boutons. Le menu déroulant regroupe le changement de thème, les paramètres et le verrouillage.",
+      },
+      {
+        type: "feat",
+        text: "Changelog intégré : cliquer sur le numéro de version en bas de la sidebar ouvre un panneau latéral avec l'historique complet des versions et un lien vers le dépôt GitHub.",
+      },
+      {
+        type: "feat",
+        text: "Vue Jour dans le Calendrier : nouveau bouton d'affichage quotidien via FullCalendar timeGridDay, en plus des vues Mois et Liste.",
+      },
+      {
+        type: "fix",
+        text: "Centrage du titre du calendrier (mois/semaine) : les colonnes gauche et droite du header prennent désormais la même largeur flexible, assurant un centrage réel du titre.",
+      },
+      {
+        type: "feat",
+        text: "Migration complète vers les SVGs : tous les emojis et caractères Unicode décoratifs remplacés par des icônes SVG centralisées (icons.tsx) dans l'ensemble de l'application.",
+      },
+      {
+        type: "chore",
+        text: "Bouton de masquage de la sidebar repositionné en haut de page, aligné avec les headers des vues.",
+      },
+    ],
+  },
+  {
+    version: "1.0.4",
+    date: "2026-03-09",
+    changes: [
+      {
+        type: "feat",
+        text: "Notifications toast (Sonner) : confirmations visuelles pour chaque création, sauvegarde ou suppression d'élément.",
+      },
+      {
+        type: "feat",
+        text: "Menu contextuel (clic droit) sur les pages de la sidebar (renommer, nouvelle sous-page, supprimer) et sur les cartes Kanban (modifier, supprimer).",
+      },
+      {
+        type: "feat",
+        text: "Panneau latéral droit (Drawer) : les modales de tâche Kanban et d'événement Calendrier s'ouvrent désormais en glissant depuis la droite.",
+      },
+      {
+        type: "feat",
+        text: "Sélecteur de date visuel (react-day-picker) pour les échéances des tâches Kanban et les dates des événements Calendrier.",
+      },
+      {
+        type: "feat",
+        text: "Fil d'Ariane (breadcrumb) au-dessus des pages pour naviguer rapidement vers les dossiers parents.",
+      },
+    ],
+  },
   {
     version: "1.0.3",
     date: "2026-03-09",

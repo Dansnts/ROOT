@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, type FC } from "react";
 import Image from "next/image";
 import { useVaultStore } from "@/stores/vaultStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useTheme } from "@/hooks/useTheme";
+import { SunIcon, CloudSunIcon, MoonIcon, StarsIcon } from "@/components/ui/icons";
 
 type Mode = "checking" | "init" | "unlock" | "loading";
 
@@ -17,11 +18,11 @@ const GREETINGS: Record<"morning" | "afternoon" | "evening" | "night", string[]>
   night:     ["Bonne nuit", "Encore debout ?", "Soirée tardive"],
 };
 
-const EMOJIS: Record<"morning" | "afternoon" | "evening" | "night", string> = {
-  morning:   "☀️",
-  afternoon: "🌤️",
-  evening:   "🌙",
-  night:     "🌃",
+const TIME_ICONS: Record<"morning" | "afternoon" | "evening" | "night", FC<{ size?: number }>> = {
+  morning:   SunIcon,
+  afternoon: CloudSunIcon,
+  evening:   MoonIcon,
+  night:     StarsIcon,
 };
 
 function getTimeSlot(): "morning" | "afternoon" | "evening" | "night" {
@@ -58,7 +59,7 @@ export default function VaultGate() {
   // Greeting fixé au montage (cohérent pendant toute la session de login)
   const [greeting] = useState(() => {
     const slot = getTimeSlot();
-    return { text: randomFrom(GREETINGS[slot]), emoji: EMOJIS[slot] };
+    return { text: randomFrom(GREETINGS[slot]), Icon: TIME_ICONS[slot] };
   });
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -119,7 +120,7 @@ export default function VaultGate() {
         {/* Greeting — visible sur l'écran de déverrouillage si prénom connu */}
         {showGreeting ? (
           <div className="text-center mb-10">
-            <div className="text-4xl mb-3">{greeting.emoji}</div>
+            <div className="mb-3 text-[var(--text-faint)] flex justify-center"><greeting.Icon size={40} /></div>
             <h1 className="text-2xl font-bold text-[var(--text)]">
               {greeting.text},{" "}
               <span className="text-[var(--accent)]">{storedName}</span>

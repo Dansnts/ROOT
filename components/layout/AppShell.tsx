@@ -8,6 +8,13 @@ import BlockEditor from "@/components/editor/BlockEditor";
 import { usePagesStore } from "@/stores/pagesStore";
 import { useTagsStore } from "@/stores/tagsStore";
 import { useAppInit } from "@/hooks/useAppInit";
+import React from "react";
+import {
+  Breadcrumb, BreadcrumbList, BreadcrumbItem,
+  BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { ChevronRightIcon, ChevronLeftIcon, FolderIcon, XIcon, CheckIcon } from "@/components/ui/icons";
+import type { DecryptedPage } from "@/lib/BlockService";
 
 const KanbanBoard        = dynamic(() => import("@/components/kanban/KanbanBoard"),               { ssr: false });
 const CalendarView       = dynamic(() => import("@/components/calendar/CalendarView"),           { ssr: false });
@@ -49,10 +56,10 @@ export default function AppShell() {
       {/* Tab de toggle — toujours visible au bord de la sidebar */}
       <button
         onClick={() => setSidebarCollapsed((v) => !v)}
-        className="shrink-0 self-start mt-[68px] w-4 flex items-center justify-center py-5 bg-[var(--surface)] border border-l-0 border-[var(--border)] rounded-r-md text-[var(--text-faint)] hover:text-[var(--text-muted)] hover:bg-[var(--surface-2)] transition-colors z-10"
+        className="shrink-0 self-start mt-3 w-4 flex items-center justify-center py-3 bg-[var(--surface)] border border-l-0 border-[var(--border)] rounded-r-md text-[var(--text-faint)] hover:text-[var(--text-muted)] hover:bg-[var(--surface-2)] transition-colors z-10"
         title={sidebarCollapsed ? "Afficher le menu" : "Masquer le menu"}
       >
-        <span className="text-[9px] leading-none">{sidebarCollapsed ? "▶" : "◀"}</span>
+        {sidebarCollapsed ? <ChevronRightIcon size={10} /> : <ChevronLeftIcon size={10} />}
       </button>
 
       <main className="flex-1 overflow-hidden flex flex-col min-w-0">
@@ -76,6 +83,11 @@ export default function AppShell() {
             {/* Vue éditeur (feuilles uniquement) */}
             {activePage && !activePage.isFolder && (
               <div className="w-[75%] min-w-[480px]">
+                <PageBreadcrumb
+                  pages={pages}
+                  activePageId={activePage.id}
+                  onSelect={setActivePage}
+                />
                 <PageTitle pageId={activePage.id} title={activePage.title} />
                 <PageTagsRow pageId={activePage.id} tagIds={activePage.tagIds ?? []} />
                 <BlockEditor pageId={activePage.id} />
@@ -117,6 +129,54 @@ export default function AppShell() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+// ── Breadcrumb de navigation ──────────────────────────────────────────────────
+
+function PageBreadcrumb({
+  pages,
+  activePageId,
+  onSelect,
+}: {
+  pages: DecryptedPage[];
+  activePageId: string;
+  onSelect: (id: string) => void;
+}) {
+  // Build ancestor path
+  const ancestors: DecryptedPage[] = [];
+  let cursor = pages.find((p) => p.id === activePageId);
+  while (cursor?.parentId) {
+    const parent = pages.find((p) => p.id === cursor!.parentId);
+    if (!parent) break;
+    ancestors.unshift(parent);
+    cursor = parent;
+  }
+
+  if (ancestors.length === 0) return null;
+
+  return (
+    <div className="px-16 pt-8 pb-0">
+      <Breadcrumb>
+        <BreadcrumbList>
+          {ancestors.map((p) => (
+            <React.Fragment key={p.id}>
+              <BreadcrumbItem>
+                <BreadcrumbLink onClick={() => onSelect(p.id)}>
+                  {p.isFolder && <FolderIcon size={13} className="inline-block mr-1" />}{p.title}
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+            </React.Fragment>
+          ))}
+          <BreadcrumbItem>
+            <BreadcrumbPage>
+              {pages.find((p) => p.id === activePageId)?.title ?? ""}
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
     </div>
   );
 }
@@ -171,7 +231,7 @@ function PageTagsRow({ pageId, tagIds }: { pageId: string; tagIds: string[] }) {
           style={{ backgroundColor: tag.color }}
           title="Retirer ce tag"
         >
-          {tag.name} ✕
+          {tag.name} <XIcon size={10} />
         </button>
       ))}
       <div className="relative">
@@ -195,7 +255,7 @@ function PageTagsRow({ pageId, tagIds }: { pageId: string; tagIds: string[] }) {
                 >
                   <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tag.color }} />
                   <span className="text-[var(--text)] flex-1">{tag.name}</span>
-                  {active && <span className="text-[var(--accent)] text-[10px]">✓</span>}
+                  {active && <CheckIcon size={10} className="text-[var(--accent)]" />}
                 </button>
               );
             })}

@@ -8,6 +8,12 @@ import type { TaskPriority } from "@/lib/database";
 import { useKanbanStore } from "@/stores/kanbanStore";
 import { useTagsStore } from "@/stores/tagsStore";
 import TaskDetailModal from "./TaskDetailModal";
+import {
+  ContextMenu, ContextMenuTrigger, ContextMenuContent,
+  ContextMenuItem, ContextMenuSeparator,
+} from "@/components/ui/context-menu";
+import { toast } from "@/components/ui/sonner";
+import { XIcon, PencilIcon, WarningIcon } from "@/components/ui/icons";
 
 const PRIORITY_COLORS: Record<TaskPriority, string> = {
   none:    "text-[var(--text-faint)]",
@@ -58,8 +64,10 @@ export default function TaskCard({ task }: { task: KanbanTask }) {
   }
 
   return (
+    <ContextMenu>
     <>
     {showDetail && <TaskDetailModal task={task} onClose={() => setShowDetail(false)} />}
+    <ContextMenuTrigger asChild>
     <div
       ref={setNodeRef}
       style={{
@@ -127,7 +135,7 @@ export default function TaskCard({ task }: { task: KanbanTask }) {
                 : "bg-[var(--surface-3)] text-[var(--text-muted)]"
             }`}
           >
-            {isPastDue ? "⚠ " : ""}
+            {isPastDue && <WarningIcon size={11} className="inline-block mr-0.5" />}
             {dueDateLabel}
           </span>
         )}
@@ -135,14 +143,25 @@ export default function TaskCard({ task }: { task: KanbanTask }) {
         {/* Delete */}
         <button
           onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => removeTask(task.blockId)}
+          onClick={() => { removeTask(task.blockId); toast("Tâche supprimée", { description: task.title }); }}
           className="ml-auto opacity-0 group-hover:opacity-100 text-[var(--text-faint)] hover:text-[var(--danger)] transition-all text-xs"
           title="Supprimer"
         >
-          ✕
+          <XIcon size={11} />
         </button>
       </div>
     </div>
+    </ContextMenuTrigger>
+    <ContextMenuContent>
+      <ContextMenuItem onClick={() => setShowDetail(true)}>
+        <PencilIcon size={13} /> Modifier la tâche
+      </ContextMenuItem>
+      <ContextMenuSeparator />
+      <ContextMenuItem danger onClick={() => { removeTask(task.blockId); toast("Tâche supprimée", { description: task.title }); }}>
+        <XIcon size={13} /> Supprimer
+      </ContextMenuItem>
+    </ContextMenuContent>
     </>
+    </ContextMenu>
   );
 }

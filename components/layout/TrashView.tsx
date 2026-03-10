@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { db, type PageRecord, type BlockRecord } from "@/lib/database";
 import { decryptValue } from "@/stores/vaultStore";
 import { usePagesStore } from "@/stores/pagesStore";
 import { useKanbanStore } from "@/stores/kanbanStore";
 import { extractText } from "@/lib/utils/tiptap";
+import { FolderIcon, FileIcon, SquareIcon, UndoIcon, XIcon } from "@/components/ui/icons";
 
 interface TrashedPage {
   id: string;
@@ -130,7 +131,7 @@ export default function TrashView() {
               {pages.map((page) => (
                 <TrashItem
                   key={page.id}
-                  icon={page.isFolder ? "📁" : (page.icon ?? "▪")}
+                  icon={page.isFolder ? <FolderIcon size={14} /> : <FileIcon size={14} />}
                   title={page.title}
                   deletedAt={page.deletedAt}
                   onRestore={() => handleRestorePage(page.id)}
@@ -150,7 +151,7 @@ export default function TrashView() {
               {tasks.map((task) => (
                 <TrashItem
                   key={task.id}
-                  icon="☐"
+                  icon={<SquareIcon size={14} />}
                   title={task.title}
                   deletedAt={task.deletedAt}
                   onRestore={() => handleRestoreTask(task.id)}
@@ -166,7 +167,7 @@ export default function TrashView() {
 }
 
 function TrashItem({ icon, title, deletedAt, onRestore, onDelete }: {
-  icon: string;
+  icon: React.ReactNode;
   title: string;
   deletedAt: number;
   onRestore: () => void;
@@ -186,17 +187,17 @@ function TrashItem({ icon, title, deletedAt, onRestore, onDelete }: {
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
         <button
           onClick={onRestore}
-          className="px-2 py-0.5 rounded text-xs text-[var(--accent)] hover:bg-[var(--surface-3)] transition-colors"
+          className="flex items-center gap-1 px-2 py-0.5 rounded text-xs text-[var(--accent)] hover:bg-[var(--surface-3)] transition-colors"
           title="Restaurer"
         >
-          ↩ Restaurer
+          <UndoIcon size={13} /> Restaurer
         </button>
         <button
           onClick={onDelete}
-          className="px-2 py-0.5 rounded text-xs text-[var(--danger)] hover:bg-red-900/20 transition-colors"
+          className="flex items-center px-2 py-0.5 rounded text-xs text-[var(--danger)] hover:bg-red-900/20 transition-colors"
           title="Supprimer définitivement"
         >
-          ✕
+          <XIcon size={13} />
         </button>
       </div>
     </div>

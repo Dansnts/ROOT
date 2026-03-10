@@ -19,6 +19,7 @@ import type { Editor } from "@tiptap/core";
 import { SlashCommandExtension } from "./SlashCommandExtension";
 import { loadPageAsDocument, savePageDocument } from "@/lib/BlockService";
 import { useVaultStore } from "@/stores/vaultStore";
+import { LinkIcon } from "@/components/ui/icons";
 
 interface Props {
   pageId: string;
@@ -336,7 +337,7 @@ function BubbleToolbar({ editor }: { editor: Editor }) {
       <BubbleBtn active={editor.isActive("code")}      onClick={() => editor.chain().focus().toggleCode().run()}      title="Code">{"`"}</BubbleBtn>
       <BubbleBtn active={editor.isActive("highlight")} onClick={() => editor.chain().focus().toggleHighlight().run()} title="Surligner">▮</BubbleBtn>
       <div className="bubble-divider" />
-      <BubbleBtn active={editor.isActive("link")} onClick={handleSetLink} title="Lien">🔗</BubbleBtn>
+      <BubbleBtn active={editor.isActive("link")} onClick={handleSetLink} title="Lien"><LinkIcon size={13} /></BubbleBtn>
     </div>,
     document.body,
   );

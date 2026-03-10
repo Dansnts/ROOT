@@ -8,7 +8,7 @@
 
 <p align="center">
   Zero-Knowledge personal workspace.<br/>
-  Notes, Kanban, Calendar — fully local, fully encrypted, zero server.
+  Notes, Kanban, Calendar  fully local, fully encrypted, zero server.
 </p>
 
 <p align="center">
@@ -23,7 +23,7 @@
 
 ## What it is
 
-ROOT is a single-user, offline-first workspace that lives entirely in your browser's IndexedDB. There is no account, no API, no telemetry. Your Master Password never leaves your device — it derives a `CryptoKey` that is `extractable: false` and used exclusively in-RAM. Everything written to disk (IndexedDB) is an AES-GCM ciphertext.
+ROOT is a single-user, offline-first workspace that lives entirely in your browser's IndexedDB. There is no account, no API, no telemetry. Your Master Password never leaves your device  it derives a `CryptoKey` that is `extractable: false` and used exclusively in-RAM. Everything written to disk (IndexedDB) is an AES-GCM ciphertext.
 
 ---
 
@@ -38,7 +38,7 @@ ROOT is a single-user, offline-first workspace that lives entirely in your brows
 Notes
 </h3>
 
-Rich block editor powered by TipTap. Paragraphs, headings, lists, code blocks, quotes, callouts, dividers. Every block is encrypted individually — the storage engine never sees plaintext.
+Rich block editor powered by TipTap. Paragraphs, headings, lists, code blocks, quotes, callouts, dividers. Every block is encrypted individually  the storage engine never sees plaintext.
 
 Pages live in a tree. Folders group them. Drag-and-drop reorders anything. Double-click a folder to get a terminal-style tree view with `├──` navigation.
 
@@ -66,7 +66,7 @@ Persistent task board with status columns. Cards carry priority, due date, and t
 Calendar + CalDAV
 </h3>
 
-FullCalendar view with two-way sync to any CalDAV server (Infomaniak, Fastmail, iCloud, Nextcloud…). Credentials are encrypted at rest. Sync runs through a local nginx reverse proxy that handles CORS — no data transits a third-party.
+FullCalendar view with two-way sync to any CalDAV server (Infomaniak, Fastmail, iCloud, Nextcloud…). Credentials are encrypted at rest. Sync runs through a local nginx reverse proxy that handles CORS  no data transits a third-party.
 
 <img src="docs/images/CreateEvent.png" alt=""/>
 
@@ -80,7 +80,7 @@ Each calendar can be mapped to either the calendar view or the Kanban board.
 Zero-Knowledge vault
 </h3>
 
-Unlock with a Master Password. PBKDF2 (SHA-256, 600 000 iterations) derives the key. A sentinel value proves the password is correct without storing it. The `CryptoKey` is `extractable: false` — the browser will never hand it back to JavaScript.
+Unlock with a Master Password. PBKDF2 (SHA-256, 600 000 iterations) derives the key. A sentinel value proves the password is correct without storing it. The `CryptoKey` is `extractable: false`  the browser will never hand it back to JavaScript.
 
 Lock at any time. The key is erased from memory. The app returns to the password screen.
 
@@ -99,9 +99,9 @@ Lock at any time. The key is erased from memory. The app returns to the password
 |---|---|
 | Key derivation | PBKDF2-SHA256, 600 000 iterations, 256-bit random salt |
 | Encryption | AES-GCM 256-bit, unique 96-bit IV per ciphertext |
-| Key storage | `CryptoKey { extractable: false }` — in RAM only, never persisted |
+| Key storage | `CryptoKey { extractable: false }`  in RAM only, never persisted |
 | Password verification | Encrypted sentinel constant, compared after decryption |
-| Plaintext surface | Zero — titles, content, settings, credentials all encrypted before IndexedDB write |
+| Plaintext surface | Zero  titles, content, settings, credentials all encrypted before IndexedDB write |
 | Network | Static export only. CalDAV sync via local nginx proxy (no external relay) |
 
 ---
@@ -110,7 +110,7 @@ Lock at any time. The key is erased from memory. The app returns to the password
 
 | Action | What it does |
 |---|---|
-| **Backup** | Exports raw IndexedDB rows as `.json`. Data stays encrypted — the file is useless without your Master Password. |
+| **Backup** | Exports raw IndexedDB rows as `.json`. Data stays encrypted  the file is useless without your Master Password. |
 | **Restore** | Imports a backup. Replaces current content. Requires the same Master Password. |
 | **Export MD** | Decrypts and exports all pages as `.md` files. |
 | **Import MD** | Creates a new encrypted page from a `.md` file. |
@@ -122,7 +122,7 @@ Lock at any time. The key is erased from memory. The app returns to the password
 
 | | |
 |---|---|
-| Framework | Next.js 15 (static export — no server runtime) |
+| Framework | Next.js 15 (static export  no server runtime) |
 | Editor | TipTap 2 |
 | Storage | Dexie.js (IndexedDB) |
 | Crypto | Web Crypto API (native browser) |
@@ -158,17 +158,17 @@ docker run -p 8080:80 root
 ```
 browser
   └── Next.js SPA (static)
-        ├── VaultGate      — password screen, key derivation
-        ├── AppShell       — layout, routing between views
-        │     ├── Sidebar  — page tree, drag-and-drop, navigation
-        │     ├── Notes    — TipTap block editor
-        │     ├── Kanban   — task board
-        │     └── Calendar — FullCalendar + CalDAV sync
+        ├── VaultGate       password screen, key derivation
+        ├── AppShell        layout, routing between views
+        │     ├── Sidebar   page tree, drag-and-drop, navigation
+        │     ├── Notes     TipTap block editor
+        │     ├── Kanban    task board
+        │     └── Calendar  FullCalendar + CalDAV sync
         └── IndexedDB (Dexie)
-              ├── vault_meta  — salt + encrypted sentinel
-              ├── pages       — encrypted titles, tree structure
-              ├── blocks      — encrypted content, one row per block
-              └── settings    — encrypted CalDAV config, preferences
+              ├── vault_meta   salt + encrypted sentinel
+              ├── pages        encrypted titles, tree structure
+              ├── blocks       encrypted content, one row per block
+              └── settings     encrypted CalDAV config, preferences
 
 nginx (container)
   ├── /            → static Next.js build
@@ -192,7 +192,7 @@ All reads and writes go through `VaultService` (encrypt/decrypt) before touching
 
 ## License
 
-[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) — free to use, share, and adapt with attribution, non-commercially, under the same license.
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)  free to use, share, and adapt with attribution, non-commercially, under the same license.
 
 <p align="center">
   <sub>Zero-Knowledge · AES-GCM 256 · PBKDF2 600k · local-first</sub>

@@ -2,6 +2,7 @@
 
 import { type DecryptedPage } from "@/lib/BlockService";
 import { usePagesStore } from "@/stores/pagesStore";
+import { ArrowLeftIcon, FolderIcon, FolderOpenIcon, FileIcon } from "@/components/ui/icons";
 
 interface Props {
   folder: DecryptedPage;
@@ -42,7 +43,7 @@ export default function FolderView({ folder, pages, onNavigate }: Props) {
             className="flex items-center gap-1 text-[var(--text-faint)] hover:text-[var(--accent)] transition-colors"
             title="Remonter"
           >
-            <span>←</span> <span>{parent.isFolder ? "📁" : "▪"} {parent.title}</span>
+            <ArrowLeftIcon size={14} /> <span className="flex items-center gap-1">{parent.isFolder ? <FolderIcon size={13} /> : <FileIcon size={13} />} {parent.title}</span>
           </button>
         )}
         {!parent && (
@@ -131,7 +132,7 @@ function TerminalTree({
         const connector    = isLast ? "└── " : "├── ";
         const childPrefix  = prefix + (isLast ? "    " : "│   ");
         const hasChildren  = pages.some((p) => p.parentId === child.id && !p.isDeleted);
-        const icon         = child.isFolder ? (hasChildren ? "📁" : "📂") : "▪";
+        const icon         = child.isFolder ? (hasChildren ? <FolderOpenIcon size={13} /> : <FolderIcon size={13} />) : <FileIcon size={13} />;
 
         return (
           <div key={child.id}>
@@ -147,7 +148,7 @@ function TerminalTree({
                     : "text-[var(--text-muted)] hover:text-[var(--text)]"
                 }`}
               >
-                <span className="text-xs">{icon}</span>
+                <span className="text-[var(--text-faint)] flex items-center">{icon}</span>
                 <span className={child.isFolder ? "font-semibold" : ""}>
                   {child.title}
                 </span>

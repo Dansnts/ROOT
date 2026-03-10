@@ -14,6 +14,7 @@ import KanbanColumn from "./KanbanColumn";
 import TaskDetailModal from "./TaskDetailModal";
 import type { KanbanTask } from "@/lib/KanbanService";
 import type { TaskStatus, TaskPriority } from "@/lib/database";
+import { RefreshIcon, ChevronDownIcon, CheckIcon, XIcon, PlusIcon } from "@/components/ui/icons";
 
 interface Column { id: TaskStatus; label: string; accent: string }
 
@@ -116,14 +117,14 @@ export default function KanbanBoard() {
       {/* Header */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)] shrink-0">
         <h2 className="text-lg font-semibold">Kanban</h2>
-        <button onClick={loadTasks} className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
-          ↻
+        <button onClick={loadTasks} className="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
+          <RefreshIcon size={14} />
         </button>
         <button
           onClick={() => setShowCreate(true)}
           className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-[var(--surface-3)] border border-[var(--border-light)] text-[var(--text)] hover:border-[var(--accent)] transition-colors"
         >
-          <span className="text-[var(--accent)] font-bold">+</span> Nouvelle tâche
+          <PlusIcon size={13} className="text-[var(--accent)]" /> Nouvelle tâche
         </button>
       </div>
 
@@ -180,7 +181,7 @@ export default function KanbanBoard() {
                 }`}
               >
                 {filterTagIds.length > 0 ? `${filterTagIds.length} tag${filterTagIds.length > 1 ? "s" : ""}` : "Tous"}
-                <span className="text-[9px]">▾</span>
+                <ChevronDownIcon size={11} />
               </button>
 
               {showTagFilter && (
@@ -198,7 +199,7 @@ export default function KanbanBoard() {
                     >
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tag.color }} />
                       <span className="text-[var(--text)] flex-1">{tag.name}</span>
-                      {filterTagIds.includes(tag.id) && <span className="text-[var(--accent)] text-[10px]">✓</span>}
+                      {filterTagIds.includes(tag.id) && <CheckIcon size={10} className="text-[var(--accent)]" />}
                     </button>
                   ))}
                 </div>
@@ -211,9 +212,9 @@ export default function KanbanBoard() {
         {hasActiveFilter && (
           <button
             onClick={clearAll}
-            className="ml-auto text-xs text-[var(--text-faint)] hover:text-[var(--danger)] transition-colors"
+            className="ml-auto flex items-center gap-1 text-xs text-[var(--text-faint)] hover:text-[var(--danger)] transition-colors"
           >
-            ✕ Réinitialiser
+            <XIcon size={11} /> Réinitialiser
           </button>
         )}
       </div>
