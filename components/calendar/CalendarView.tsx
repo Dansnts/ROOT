@@ -215,6 +215,7 @@ export default function CalendarView() {
           height="100%"
           dayMaxEvents={3}
           moreLinkClick={(info) => {
+            info.jsEvent.stopPropagation();
             const el = (info.jsEvent.target as HTMLElement).closest("a,button") as HTMLElement ?? (info.jsEvent.target as HTMLElement);
             const rect = el.getBoundingClientRect();
             setMorePopover({
@@ -222,7 +223,6 @@ export default function CalendarView() {
               y: rect.bottom + 6,
               evIds: info.allSegs.map((s) => s.event.id),
             });
-            // retourner void → FullCalendar ouvre son popover natif mais on le masque en CSS
           }}
         />
       </div>
