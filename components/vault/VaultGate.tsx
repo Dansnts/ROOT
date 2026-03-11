@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef, type FC } from "react";
-import Image from "next/image";
 import { useVaultStore } from "@/stores/vaultStore";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { useTheme } from "@/hooks/useTheme";
 import { SunIcon, CloudSunIcon, MoonIcon, StarsIcon } from "@/components/ui/icons";
 
 type Mode = "checking" | "init" | "unlock" | "loading";
@@ -42,9 +40,6 @@ function randomFrom<T>(arr: T[]): T {
 export default function VaultGate() {
   const { checkVaultExists, initVault, unlock, status } = useVaultStore();
   const { loadSettings, saveUserName } = useSettingsStore();
-  const { theme } = useTheme();
-  const logoSrc = theme === "dark" ? "/pictures/logo_dark.png" : "/pictures/logo_light.png";
-
   const [mode, setMode]           = useState<Mode>("checking");
   const [password, setPassword]   = useState("");
   const [confirm, setConfirm]     = useState("");
@@ -131,16 +126,7 @@ export default function VaultGate() {
           </div>
         ) : (
           <div className="text-center mb-10">
-            <div className="flex justify-center mb-4">
-              <Image
-                src={logoSrc}
-                alt="ROOT"
-                width={160}
-                height={40}
-                style={{ imageRendering: "pixelated" }}
-                unoptimized
-              />
-            </div>
+            <h1 className="text-2xl font-bold text-[var(--accent)] tracking-tight">ROOT</h1>
             <p className="text-sm text-[var(--text-muted)] mt-2">
               {mode === "init" ? "Créez votre espace sécurisé" : "Déverrouillez votre espace"}
             </p>
