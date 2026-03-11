@@ -215,12 +215,14 @@ export default function CalendarView() {
           height="100%"
           dayMaxEvents={3}
           moreLinkClick={(info) => {
-            const rect = (info.jsEvent.target as HTMLElement).getBoundingClientRect();
+            const el = (info.jsEvent.target as HTMLElement).closest("a,button") as HTMLElement ?? (info.jsEvent.target as HTMLElement);
+            const rect = el.getBoundingClientRect();
             setMorePopover({
               x: rect.left,
               y: rect.bottom + 6,
               evIds: info.allSegs.map((s) => s.event.id),
             });
+            return "custom-handled"; // empêche FullCalendar d'ouvrir son propre popover
           }}
         />
       </div>
