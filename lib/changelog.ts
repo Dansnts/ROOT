@@ -9,7 +9,7 @@
  *   4. `git tag v<version>` puis `git push origin v<version>`
  */
 
-export const APP_VERSION = "1.2.1";
+export const APP_VERSION = "1.2.2";
 
 export type ReleaseType = "feat" | "fix" | "perf" | "chore";
 
@@ -25,6 +25,14 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.2.2",
+    date: "2026-03-11",
+    changes: [
+      { type: "chore", text: "Suppression du logo image au démarrage (remplacé par wordmark texte)" },
+      { type: "chore", text: "Suppression de l'onglet Nouveautés dans les paramètres" },
+    ],
+  },
   {
     version: "1.2.1",
     date: "2026-03-10",
