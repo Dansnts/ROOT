@@ -353,6 +353,8 @@ body {
 .root-calendar .fc-list-day-cushion { background: var(--surface) !important; }
 .root-calendar .fc-list-day-text,
 .root-calendar .fc-list-day-side-text { color: var(--text-muted); }
+/* Masquer le popover natif FullCalendar sans casser offsetParent (visibility ≠ display:none) */
+.root-calendar .fc-more-popover { visibility: hidden !important; pointer-events: none !important; }
 
 /* ── Vaul Drawer — animation slide droite ─────────────────────────────────── */
 [vaul-drawer][vaul-drawer-direction="right"] {

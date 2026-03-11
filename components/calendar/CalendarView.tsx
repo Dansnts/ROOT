@@ -222,7 +222,7 @@ export default function CalendarView() {
               y: rect.bottom + 6,
               evIds: info.allSegs.map((s) => s.event.id),
             });
-            return "custom-handled"; // empêche FullCalendar d'ouvrir son propre popover
+            // retourner void → FullCalendar ouvre son popover natif mais on le masque en CSS
           }}
         />
       </div>
