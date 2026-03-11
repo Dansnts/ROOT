@@ -9,7 +9,7 @@
  *   4. `git tag v<version>` puis `git push origin v<version>`
  */
 
-export const APP_VERSION = "1.2.2";
+export const APP_VERSION = "1.2.3";
 
 export type ReleaseType = "feat" | "fix" | "perf" | "chore";
 
@@ -25,6 +25,15 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.2.3",
+    date: "2026-03-11",
+    changes: [
+      { type: "feat", text: "Calendrier : filtres de visibilité par catégorie (toggle live sur les événements)" },
+      { type: "feat", text: "Calendrier : popover '+X en plus' remplacé par un panel custom propre et cliquable" },
+      { type: "feat", text: "Sidebar DnD : dépôt avant/après les dossiers pour remonter à la racine" },
+    ],
+  },
   {
     version: "1.2.2",
     date: "2026-03-11",
