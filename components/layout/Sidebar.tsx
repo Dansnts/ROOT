@@ -107,12 +107,18 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
       setDropPos(null); return;
     }
 
+    const aRect = active.rect.current.translated;
+    const oRect = over.rect;
     if (target.isFolder) {
-      setDropPos({ id: targetId, pos: "into" });
+      if (aRect && oRect) {
+        const relY = (aRect.top + aRect.height / 2 - oRect.top) / oRect.height;
+        if (relY < 0.25)       setDropPos({ id: targetId, pos: "before" });
+        else if (relY > 0.75)  setDropPos({ id: targetId, pos: "after" });
+        else                   setDropPos({ id: targetId, pos: "into" });
+      } else {
+        setDropPos({ id: targetId, pos: "into" });
+      }
     } else {
-      // Comparer le centre Y du dragged vs le centre Y du target
-      const aRect = active.rect.current.translated;
-      const oRect = over.rect;
       if (aRect && oRect) {
         const aCy = aRect.top + aRect.height / 2;
         const oCy = oRect.top + oRect.height / 2;

@@ -14,18 +14,17 @@ import { useCategoriesStore } from "@/stores/categoriesStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useTagsStore } from "@/stores/tagsStore";
 import EventModal from "./EventModal";
-import { COLOR_PALETTE } from "@/lib/constants";
-import { TrashIcon, XIcon, RefreshIcon } from "@/components/ui/icons";
+import { RefreshIcon } from "@/components/ui/icons";
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
 export default function CalendarView() {
   const {
     events, syncStatus, lastSyncAt,
-    loadEvents, sync, updateEvent, deleteCalendarEvents,
+    loadEvents, sync, updateEvent,
   } = useCalendarStore();
 
-  const { categories, updateCategory, deleteCategory, loadCategories } = useCategoriesStore();
+  const { categories, loadCategories } = useCategoriesStore();
   const { caldav, loadSettings } = useSettingsStore();
   const { tags } = useTagsStore();
   const tagById = new Map(tags.map((t) => [t.id, t]));
@@ -33,37 +32,19 @@ export default function CalendarView() {
 
   const [createDate,   setCreateDate]   = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<StoreEvent | null>(null);
-  const [colorPickerId, setColorPickerId] = useState<string | null>(null);
+  const [hiddenCatIds, setHiddenCatIds] = useState<Set<string>>(new Set());
+  const [morePopover,     setMorePopover]     = useState<{
+    x: number; y: number;
+    evIds: string[];
+  } | null>(null);
 
-  async function handleCategoryColorChange(catId: string, newColor: string) {
-    await updateCategory(catId, { color: newColor });
-    await loadEvents();
-    setColorPickerId(null);
-  }
-
-  async function handleClearCategory(catId: string) {
-    if (!confirm("Supprimer tous les événements de cette catégorie ?")) return;
-    await deleteCalendarEvents(catId);
-    setColorPickerId(null);
-  }
-
-  async function handleRemoveCategory(catId: string) {
-    if (!confirm("Supprimer cette catégorie ? (les événements déjà importés seront supprimés)")) return;
-    await deleteCalendarEvents(catId);
-    await deleteCategory(catId);
-    // Retirer le lien categoryId dans la config CalDAV
-    const caldavState = useSettingsStore.getState().caldav;
-    if (caldavState) {
-      const { saveCalDAV } = useSettingsStore.getState();
-      await saveCalDAV({
-        ...caldavState,
-        calendars: caldavState.calendars.map((c) =>
-          c.categoryId === catId ? { ...c, categoryId: undefined } : c
-        ),
-      });
-    }
-    await loadEvents();
-    setColorPickerId(null);
+  function toggleCategoryVisibility(catId: string) {
+    setHiddenCatIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(catId)) next.delete(catId);
+      else next.add(catId);
+      return next;
+    });
   }
 
   useEffect(() => {
@@ -96,7 +77,7 @@ export default function CalendarView() {
     if (ev) { setEditingEvent(ev); setCreateDate(null); }
   }, [events]);
 
-  const fcEvents = events.map((e) => ({
+  const fcEvents = events.filter((e) => !hiddenCatIds.has(e.categoryId)).map((e) => ({
     id: e.id,
     title: e.title,
     start: e.start,
@@ -124,66 +105,40 @@ export default function CalendarView() {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" onClick={() => setColorPickerId(null)}>
+    <div className="flex flex-col h-full overflow-hidden" onClick={() => setMorePopover(null)}>
       {/* Header */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)] shrink-0 flex-wrap" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-semibold shrink-0">Calendrier</h2>
         <span className="text-xs text-[var(--text-faint)] shrink-0">{events.length} événement{events.length !== 1 ? "s" : ""}</span>
 
-        {/* Légende des catégories */}
+        {/* Filtres catégories — toggle visibilité */}
         {categories.length > 0 && (
-          <div className="flex items-center gap-3 flex-wrap">
-            {categories.map((cat) => (
-              <div key={cat.id} className="relative">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {categories.map((cat) => {
+              const hidden = hiddenCatIds.has(cat.id);
+              return (
                 <button
-                  onClick={() => setColorPickerId(colorPickerId === cat.id ? null : cat.id)}
-                  className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors group"
-                  title="Modifier la catégorie"
+                  key={cat.id}
+                  onClick={() => toggleCategoryVisibility(cat.id)}
+                  title={hidden ? `Afficher ${cat.name}` : `Masquer ${cat.name}`}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border transition-all ${
+                    hidden
+                      ? "border-[var(--border)] text-[var(--text-faint)] opacity-50"
+                      : "text-[var(--text-muted)] hover:text-[var(--text)]"
+                  }`}
+                  style={!hidden ? { borderColor: cat.color + "80", backgroundColor: cat.color + "18" } : {}}
                 >
                   <span
-                    className="w-3 h-3 rounded-full shrink-0 ring-2 ring-transparent group-hover:ring-[var(--border-light)] transition-all"
-                    style={{ backgroundColor: cat.color }}
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: cat.color, opacity: hidden ? 0.4 : 1 }}
                   />
                   {cat.name}
-                  {countByCategory.has(cat.id) && (
-                    <span className="text-[10px] opacity-50">({countByCategory.get(cat.id)})</span>
+                  {!hidden && countByCategory.has(cat.id) && (
+                    <span className="opacity-50 text-[10px]">{countByCategory.get(cat.id)}</span>
                   )}
                 </button>
-                {colorPickerId === cat.id && (
-                  <div className="absolute top-full left-0 mt-2 z-30 bg-[var(--surface-2)] border border-[var(--border-light)] rounded-xl shadow-xl p-3 flex flex-col gap-2 min-w-[180px]">
-                    <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">Couleur — {cat.name}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {COLOR_PALETTE.map((c) => (
-                        <button
-                          key={c}
-                          onClick={() => handleCategoryColorChange(cat.id, c)}
-                          className="w-6 h-6 rounded-full border-2 transition-all hover:scale-110"
-                          style={{
-                            backgroundColor: c,
-                            borderColor: cat.color === c ? "var(--text)" : "transparent",
-                          }}
-                          title={c}
-                        />
-                      ))}
-                    </div>
-                    <div className="border-t border-[var(--border)] pt-2 mt-1 flex flex-col gap-0.5">
-                      <button
-                        onClick={() => handleClearCategory(cat.id)}
-                        className="w-full text-left text-[10px] text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors py-1 px-1 rounded hover:bg-red-900/20 flex items-center gap-1.5"
-                      >
-                        <TrashIcon size={12} /> Vider la catégorie
-                      </button>
-                      <button
-                        onClick={() => handleRemoveCategory(cat.id)}
-                        className="w-full text-left text-[10px] text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors py-1 px-1 rounded hover:bg-red-900/20 flex items-center gap-1.5"
-                      >
-                        <XIcon size={12} /> Supprimer la catégorie
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -259,9 +214,49 @@ export default function CalendarView() {
           }}
           height="100%"
           dayMaxEvents={3}
-          moreLinkClick="popover"
+          moreLinkClick={(info) => {
+            const rect = (info.jsEvent.target as HTMLElement).getBoundingClientRect();
+            setMorePopover({
+              x: rect.left,
+              y: rect.bottom + 6,
+              evIds: info.allSegs.map((s) => s.event.id),
+            });
+          }}
         />
       </div>
+
+      {/* Popover "+X en plus" */}
+      {morePopover && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setMorePopover(null)} />
+          <div
+            className="fixed z-50 bg-[var(--surface-2)] border border-[var(--border-light)] rounded-xl shadow-2xl py-1.5 flex flex-col min-w-[200px] max-w-[260px] max-h-[320px] overflow-y-auto"
+            style={{ left: morePopover.x, top: morePopover.y }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="px-3 py-1 text-[10px] text-[var(--text-faint)] uppercase tracking-widest border-b border-[var(--border)] mb-1">
+              {morePopover.evIds.length} événement{morePopover.evIds.length > 1 ? "s" : ""}
+            </p>
+            {morePopover.evIds.map((evId) => {
+              const ev = events.find((e) => e.id === evId);
+              if (!ev) return null;
+              return (
+                <button
+                  key={evId}
+                  onClick={() => { setEditingEvent(ev); setCreateDate(null); setMorePopover(null); }}
+                  className="flex items-center gap-2.5 px-3 py-2 hover:bg-[var(--surface-3)] transition-colors text-left"
+                >
+                  <span
+                    className="w-2.5 h-2.5 rounded-sm shrink-0"
+                    style={{ backgroundColor: ev.color }}
+                  />
+                  <span className="text-sm text-[var(--text-muted)] truncate">{ev.title}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* Modals */}
       {createDate && (
