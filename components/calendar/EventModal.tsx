@@ -172,7 +172,7 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
                 </span>
               </button>
               {showStartCal && (
-                <div className="border border-[var(--border)] rounded-xl bg-[var(--surface-3)]">
+                <div className="rounded-xl bg-[var(--surface-3)] border border-[var(--border)]">
                   <Calendar
                     mode="single"
                     selected={dateFromStr(dtstart)}
@@ -208,7 +208,7 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
                 )}
               </button>
               {showEndCal && (
-                <div className="border border-[var(--border)] rounded-xl bg-[var(--surface-3)]">
+                <div className="rounded-xl bg-[var(--surface-3)] border border-[var(--border)]">
                   <Calendar
                     mode="single"
                     selected={dateFromStr(dtend)}

@@ -193,7 +193,7 @@ export default function TaskDetailModal({ task, defaultStatus = "todo", onClose 
                 )}
               </button>
               {showCalendar && (
-                <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--surface-3)]">
+                <div className="rounded-xl bg-[var(--surface-3)] border border-[var(--border)]">
                   <Calendar
                     mode="single"
                     selected={dateFromStr(dueDate)}

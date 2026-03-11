@@ -13,7 +13,7 @@ export function Calendar({ className = "", ...props }: CalendarProps) {
       weekStartsOn={1}
       showOutsideDays
       fixedWeeks
-      className={`p-3 select-none relative ${className}`}
+      className={`p-3 select-none relative w-fit mx-auto ${className}`}
       classNames={{
         months: "flex flex-col",
         month: "space-y-2",
@@ -24,11 +24,11 @@ export function Calendar({ className = "", ...props }: CalendarProps) {
           "pointer-events-auto p-1 w-7 h-7 flex items-center justify-center rounded-md text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors",
         button_next:
           "pointer-events-auto p-1 w-7 h-7 flex items-center justify-center rounded-md text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors",
-        month_grid: "w-full border-collapse",
+        month_grid: "border-collapse",
         weekdays: "flex",
         weekday:
           "text-[var(--text-faint)] text-[11px] w-9 font-normal text-center py-1",
-        week: "flex w-full mt-0.5",
+        week: "flex mt-0.5",
         day: "h-9 w-9 text-center p-0",
         day_button:
           "h-9 w-9 rounded-lg text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--text)] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)]",
