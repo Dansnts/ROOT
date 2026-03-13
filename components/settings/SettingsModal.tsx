@@ -17,7 +17,7 @@ import {
 } from "@/lib/ExportService";
 import { usePagesStore } from "@/stores/pagesStore";
 import { useCalendarStore } from "@/stores/calendarStore";
-import { exportBackup, importBackup, nukeVault } from "@/lib/BackupService";
+import { exportBackup, importBackup, nukeVault, type BackupSelection } from "@/lib/BackupService";
 import type { CalDAVConfig, CalendarEntry } from "@/lib/database";
 import { db } from "@/lib/database";
 import { vaultService } from "@/lib/VaultService";
@@ -687,6 +687,57 @@ function ExportTab({ onImport, fileRef }: {
 
 // ── Onglet Données ────────────────────────────────────────────────────────────
 
+const BACKUP_SECTIONS: { key: keyof BackupSelection; label: string; desc: string }[] = [
+  { key: "pages",    label: "Pages & blocs",  desc: "Notes, dossiers, tâches Kanban, événements calendrier" },
+  { key: "settings", label: "Paramètres",     desc: "Nom, avatar, thème, tags, colonnes Kanban, config CalDAV…" },
+];
+
+function SelectionCheckboxes({
+  value,
+  onChange,
+}: {
+  value: BackupSelection;
+  onChange: (s: BackupSelection) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {BACKUP_SECTIONS.map(({ key, label, desc }) => {
+        const checked = value[key];
+        return (
+          <label
+            key={key}
+            className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all select-none ${
+              checked
+                ? "border-[var(--accent)]/40 bg-[var(--accent)]/8"
+                : "border-[var(--border)] bg-[var(--surface-3)] hover:border-[var(--border-light)]"
+            }`}
+          >
+            <div className={`mt-0.5 w-4 h-4 rounded flex items-center justify-center border-2 shrink-0 transition-all ${
+              checked ? "bg-[var(--accent)] border-[var(--accent)]" : "border-[var(--border-light)] bg-[var(--surface-2)]"
+            }`}>
+              {checked && (
+                <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                  <path d="M1 3L3.5 5.5L8 1" stroke="black" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </div>
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={(e) => onChange({ ...value, [key]: e.target.checked })}
+              className="sr-only"
+            />
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs font-medium text-[var(--text)] leading-tight">{label}</p>
+              <p className="text-[10px] text-[var(--text-faint)] leading-relaxed">{desc}</p>
+            </div>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
 function DataTab({ onClose, importRef }: {
   onClose: () => void;
   importRef: React.RefObject<HTMLInputElement | null>;
@@ -695,13 +746,25 @@ function DataTab({ onClose, importRef }: {
   const [busy, setBusy]         = useState(false);
   const [status, setStatus]     = useState<string | null>(null);
 
-  // Modal de confirmation unifié export / import
-  const [modal, setModal] = useState<{ mode: "export" | "import"; file?: File } | null>(null);
+
+  type ModalState = {
+    mode: "export" | "import";
+    file?: File;
+    selection: BackupSelection;
+    importMode: "overwrite" | "merge";
+  };
+
+  const [modal, setModal] = useState<ModalState | null>(null);
   const [pwInput, setPwInput] = useState("");
   const [pwError, setPwError] = useState<string | null>(null);
 
   function openModal(mode: "export" | "import", file?: File) {
-    setModal({ mode, file });
+    setModal({
+      mode,
+      file,
+      selection: { pages: true, settings: true },
+      importMode: "overwrite",
+    });
     setPwInput("");
     setPwError(null);
   }
@@ -719,15 +782,23 @@ function DataTab({ onClose, importRef }: {
       const valid = await vaultService.verifyKey(key, meta.verifier);
       if (!valid) { setPwError("Mot de passe incorrect."); setBusy(false); return; }
 
+      const sel = modal.selection;
+      if (!sel.pages && !sel.settings) {
+        setPwError("Sélectionnez au moins un type de données.");
+        setBusy(false);
+        return;
+      }
+
       if (modal.mode === "export") {
         closeModal();
-        await exportBackup();
+        await exportBackup(sel);
         setStatus("Backup téléchargé.");
       } else if (modal.mode === "import" && modal.file) {
         const file = modal.file;
+        const opts = { mode: modal.importMode, selection: sel };
         closeModal();
         setStatus("Import en cours…");
-        await importBackup(file, setStatus);
+        await importBackup(file, setStatus, opts);
         setStatus("Import terminé — rechargement…");
         setTimeout(() => window.location.reload(), 800);
       }
@@ -745,71 +816,110 @@ function DataTab({ onClose, importRef }: {
     catch { setBusy(false); setStatus("Erreur lors de la suppression."); }
   }
 
+  const nothingSelected = modal ? (!modal.selection.pages && !modal.selection.settings) : false;
+
   return (
     <>
       {/* ── Modal de confirmation ────────────────────────────────────────────── */}
       {modal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-sm mx-4 bg-[var(--surface-2)] border border-[var(--border-light)] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-[var(--surface-2)] border border-[var(--border-light)] rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
 
             {/* Header */}
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--border)]">
-              <span className="text-base">{modal.mode === "import" ? "⚠️" : "🔒"}</span>
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--border)] shrink-0">
               <h3 className="text-sm font-semibold text-[var(--text)]">
-                {modal.mode === "export" ? "Confirmer l'export" : "Confirmer la restauration"}
+                {modal.mode === "export" ? "Exporter un backup" : "Importer un backup"}
               </h3>
               <button onClick={closeModal} className="ml-auto text-[var(--text-faint)] hover:text-[var(--text-muted)] w-6 h-6 flex items-center justify-center">
                 <XIcon size={14} />
               </button>
             </div>
 
-            <div className="flex flex-col gap-4 p-5">
-              {/* Avertissement import */}
+            <div className="flex flex-col gap-4 p-5 overflow-y-auto">
+
+              {/* Import mode toggle */}
               {modal.mode === "import" && (
-                <div className="flex gap-3 p-3 rounded-xl bg-orange-500/10 border border-orange-500/25">
-                  <span className="text-orange-400 text-lg shrink-0 leading-none mt-0.5">⚠</span>
-                  <p className="text-xs text-orange-300 leading-relaxed">
-                    <strong className="font-semibold">Toutes vos données actuelles seront effacées</strong> — pages, blocs,
-                    événements, paramètres — et remplacées par le contenu du fichier sélectionné.
-                    Cette opération est <strong className="font-semibold">irréversible</strong>.
+                <div className="flex flex-col gap-2">
+                  <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-widest">Mode d&apos;import</p>
+                  <div className="flex rounded-xl border border-[var(--border)] overflow-hidden">
+                    {(["overwrite", "merge"] as const).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setModal((prev) => prev ? { ...prev, importMode: m } : prev)}
+                        className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
+                          modal.importMode === m
+                            ? "bg-[var(--accent)]/20 text-[var(--accent)]"
+                            : "text-[var(--text-muted)] hover:bg-[var(--surface-3)]"
+                        }`}
+                      >
+                        {m === "overwrite" ? "Écraser" : "Fusionner"}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-[var(--text-faint)] leading-relaxed">
+                    {modal.importMode === "overwrite"
+                      ? "Les données sélectionnées seront entièrement remplacées par celles du fichier."
+                      : "Les éléments du fichier sont ajoutés ou mis à jour. Les données non présentes dans le fichier sont conservées."}
                   </p>
                 </div>
               )}
 
-              <p className="text-xs text-[var(--text-muted)]">
-                Entrez votre Master Password pour confirmer.
-              </p>
-
-              <input
-                type="password"
-                autoFocus
-                value={pwInput}
-                onChange={(e) => { setPwInput(e.target.value); setPwError(null); }}
-                onKeyDown={(e) => { if (e.key === "Enter") handleConfirm(); if (e.key === "Escape") closeModal(); }}
-                placeholder="Master Password"
-                className={inputCls}
-              />
-
-              {pwError && (
-                <p className="text-xs text-red-400 bg-red-900/20 px-3 py-2 rounded-lg">{pwError}</p>
+              {/* Warning overwrite */}
+              {modal.mode === "import" && modal.importMode === "overwrite" && (
+                <div className="flex gap-2.5 p-3 rounded-xl bg-orange-500/10 border border-orange-500/25">
+                  <span className="text-orange-400 shrink-0 mt-0.5">⚠</span>
+                  <p className="text-xs text-orange-300 leading-relaxed">
+                    Les données sélectionnées ci-dessous seront <strong className="font-semibold">entièrement effacées</strong> avant d&apos;être remplacées. Cette opération est <strong className="font-semibold">irréversible</strong>.
+                  </p>
+                </div>
               )}
+
+              {/* Section selection */}
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-widest">
+                  {modal.mode === "export" ? "Contenu à exporter" : "Contenu à importer"}
+                </p>
+                <SelectionCheckboxes
+                  value={modal.selection}
+                  onChange={(s) => setModal((prev) => prev ? { ...prev, selection: s } : prev)}
+                />
+              </div>
+
+              {/* Password */}
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-widest">Confirmation</p>
+                <input
+                  type="password"
+                  autoFocus
+                  value={pwInput}
+                  onChange={(e) => { setPwInput(e.target.value); setPwError(null); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleConfirm(); if (e.key === "Escape") closeModal(); }}
+                  placeholder="Master Password"
+                  className={inputCls}
+                />
+                {pwError && (
+                  <p className="text-xs text-red-400 bg-red-900/20 px-3 py-2 rounded-lg">{pwError}</p>
+                )}
+              </div>
             </div>
 
             {/* Footer */}
-            <div className="flex gap-2 px-5 py-4 border-t border-[var(--border)]">
+            <div className="flex gap-2 px-5 py-4 border-t border-[var(--border)] shrink-0">
               <button onClick={closeModal} className="px-4 py-2 rounded-lg text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] transition-colors">
                 Annuler
               </button>
               <button
                 onClick={handleConfirm}
-                disabled={busy || !pwInput}
+                disabled={busy || !pwInput || nothingSelected}
                 className={`ml-auto flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 ${
-                  modal.mode === "import"
+                  modal.mode === "import" && modal.importMode === "overwrite"
                     ? "bg-orange-600/80 hover:bg-orange-600 text-white border border-orange-500/40"
                     : "bg-[var(--accent)]/20 hover:bg-[var(--accent)]/30 text-[var(--accent)] border border-[var(--accent)]/30"
                 }`}
               >
-                {busy ? "Vérification…" : <><CheckIcon size={13} />{modal.mode === "export" ? "Exporter" : "Restaurer"}</>}
+                {busy ? "Vérification…" : (
+                  <><CheckIcon size={13} />{modal.mode === "export" ? "Exporter" : modal.importMode === "merge" ? "Fusionner" : "Restaurer"}</>
+                )}
               </button>
             </div>
           </div>
@@ -822,7 +932,7 @@ function DataTab({ onClose, importRef }: {
         <div className="flex flex-col gap-2">
           <h3 className="text-sm font-medium text-[var(--text)]">Sauvegarder</h3>
           <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-            Exporte toutes vos données déchiffrées dans un fichier JSON portable.
+            Exporte vos données déchiffrées dans un fichier JSON portable.
             Ce backup peut être importé par n&apos;importe quel vault, quel que soit le Master Password.
           </p>
           <button onClick={() => openModal("export")} disabled={busy} className={btnCls}>
@@ -834,10 +944,9 @@ function DataTab({ onClose, importRef }: {
 
         {/* Backup import */}
         <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium text-[var(--text)]">Restaurer</h3>
+          <h3 className="text-sm font-medium text-[var(--text)]">Restaurer / Fusionner</h3>
           <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-            Importe un backup ROOT (.json). Les données actuelles seront <strong className="text-[var(--text)]">entièrement remplacées</strong> et
-            ré-chiffrées avec le Master Password de ce vault.
+            Importe un backup ROOT (.json). Choisissez d&apos;écraser ou de fusionner avec vos données actuelles.
           </p>
           <input
             ref={importRef}

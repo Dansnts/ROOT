@@ -9,7 +9,7 @@
  *   4. `git tag v<version>` puis `git push origin v<version>`
  */
 
-export const APP_VERSION = "1.2.3";
+export const APP_VERSION = "1.2.4";
 
 export type ReleaseType = "feat" | "fix" | "perf" | "chore";
 
@@ -25,6 +25,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.2.4",
+    date: "2026-03-13",
+    changes: [
+      { type: "feat", text: "Éditeur : largeur 90 %, centrage dynamique (ResizeObserver, s'adapte à la sidebar)" },
+      { type: "feat", text: "Éditeur : hub flottant visible au survol avec animation pop depuis le bas" },
+      { type: "feat", text: "Éditeur : clic droit = menu contextuel avec toutes les options slash-command + actions tableau" },
+      { type: "feat", text: "App : suppression du menu contextuel natif du navigateur" },
+      { type: "feat", text: "Backup export : choix du contenu (Pages & blocs / Paramètres)" },
+      { type: "feat", text: "Backup import : mode Écraser ou Fusionner, avec choix du contenu à importer" },
+    ],
+  },
   {
     version: "1.2.3",
     date: "2026-03-11",

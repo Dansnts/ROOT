@@ -46,7 +46,7 @@
 @theme inline {
   --color-background: var(--bg);
   --color-foreground:  var(--text);
-  --font-sans: var(--font-pixelify);
+  --font-sans: var(--font-roboto);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -57,7 +57,7 @@ html, body { height: 100%; margin: 0; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-pixelify), system-ui, sans-serif;
+  font-family: var(--font-roboto), system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;

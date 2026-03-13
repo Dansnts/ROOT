@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -16,7 +16,7 @@ import Link from "@tiptap/extension-link";
 import Highlight from "@tiptap/extension-highlight";
 import Underline from "@tiptap/extension-underline";
 import type { Editor } from "@tiptap/core";
-import { SlashCommandExtension } from "./SlashCommandExtension";
+import { SlashCommandExtension, SLASH_ITEMS } from "./SlashCommandExtension";
 import { loadPageAsDocument, savePageDocument } from "@/lib/BlockService";
 import { useVaultStore } from "@/stores/vaultStore";
 import { LinkIcon, UndoIcon, RedoIcon, TrashIcon, TableIcon } from "@/components/ui/icons";
@@ -47,19 +47,41 @@ export default function BlockEditor({ pageId }: Props) {
   const { isUnlocked } = useVaultStore();
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentPageId = useRef(pageId);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   // TablePicker state
   const [tablePicker, setTablePicker] = useState<{
     open: boolean; x: number; y: number; editor: Editor | null;
   }>({ open: false, x: 0, y: 0, editor: null });
 
-  // Table context menu (right-click)
-  const [tableCtxMenu, setTableCtxMenu] = useState<{ x: number; y: number } | null>(null);
+  // Unified right-click context menu
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; inTable: boolean } | null>(null);
 
   // ImageUrlPicker state
   const [imagePicker, setImagePicker] = useState<{
     open: boolean; x: number; y: number; editor: Editor | null;
   }>({ open: false, x: 0, y: 0, editor: null });
+
+  // Hub visibility + dynamic centering
+  const [editorHovered, setEditorHovered] = useState(false);
+  const [hubBounds, setHubBounds] = useState<{ left: number; right: number }>({ left: 360, right: 0 });
+
+  useLayoutEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const update = () => {
+      const rect = el.getBoundingClientRect();
+      setHubBounds({ left: rect.left, right: window.innerWidth - rect.right });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, []);
 
   const editor = useEditor({
     extensions: [
@@ -164,10 +186,11 @@ export default function BlockEditor({ pageId }: Props) {
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if (!editor) return;
-    if (editor.isActive("table")) {
-      e.preventDefault();
-      setTableCtxMenu({ x: e.clientX, y: e.clientY });
-    }
+    e.preventDefault();
+    // Move cursor to click position
+    const result = editor.view.posAtCoords({ left: e.clientX, top: e.clientY });
+    if (result) editor.chain().setTextSelection(result.pos).run();
+    setCtxMenu({ x: e.clientX, y: e.clientY, inTable: editor.isActive("table") });
   }, [editor]);
 
   if (!isUnlocked) return null;
@@ -175,9 +198,12 @@ export default function BlockEditor({ pageId }: Props) {
   return (
     <>
       <div
+        ref={wrapperRef}
         className="flex-1 px-16 py-12 cursor-text min-h-screen"
         onClick={handleContainerClick}
         onContextMenu={handleContextMenu}
+        onMouseEnter={() => setEditorHovered(true)}
+        onMouseLeave={() => setEditorHovered(false)}
       >
         {editor && <BubbleToolbar editor={editor} />}
         <EditorContent editor={editor} />
@@ -185,17 +211,18 @@ export default function BlockEditor({ pageId }: Props) {
 
       {/* Floating editor hub */}
       {editor && createPortal(
-        <FloatingHub editor={editor} />,
+        <FloatingHub editor={editor} visible={editorHovered} hubBounds={hubBounds} />,
         document.body,
       )}
 
-      {/* Table right-click context menu */}
-      {tableCtxMenu && createPortal(
-        <TableContextMenu
-          x={tableCtxMenu.x}
-          y={tableCtxMenu.y}
-          editor={editor!}
-          onClose={() => setTableCtxMenu(null)}
+      {/* Right-click context menu */}
+      {ctxMenu && editor && createPortal(
+        <EditorContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          inTable={ctxMenu.inTable}
+          editor={editor}
+          onClose={() => setCtxMenu(null)}
         />,
         document.body,
       )}
@@ -225,7 +252,11 @@ export default function BlockEditor({ pageId }: Props) {
 
 // ── Floating hub ──────────────────────────────────────────────────────────────
 
-function FloatingHub({ editor }: { editor: Editor }) {
+function FloatingHub({ editor, visible, hubBounds }: {
+  editor: Editor;
+  visible: boolean;
+  hubBounds: { left: number; right: number };
+}) {
   // Re-render on each editor transaction so disabled states stay accurate
   const [, forceUpdate] = useState(0);
   useEffect(() => {
@@ -239,10 +270,18 @@ function FloatingHub({ editor }: { editor: Editor }) {
 
   return (
     <div
-      className="fixed bottom-5 z-[150] flex justify-center pointer-events-none"
-      style={{ left: 360, right: 0 }}
+      className="fixed bottom-5 z-[150] flex justify-center"
+      style={{ left: hubBounds.left, right: hubBounds.right }}
     >
-      <div className="pointer-events-auto flex items-center gap-0.5 px-2 py-1.5 rounded-2xl bg-[var(--surface-2)]/90 border border-[var(--border-light)] shadow-2xl backdrop-blur-md">
+      <div
+        className={[
+          "flex items-center gap-0.5 px-2 py-1.5 rounded-2xl bg-[var(--surface-2)]/90 border border-[var(--border-light)] shadow-2xl backdrop-blur-md",
+          "transition-all duration-200 ease-out",
+          visible
+            ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
+            : "opacity-0 translate-y-3 scale-95 pointer-events-none",
+        ].join(" ")}
+      >
 
         {/* Historique */}
         <HubBtn
@@ -342,59 +381,79 @@ function HubDivider() {
   return <div className="w-px h-4 bg-[var(--border-light)] mx-0.5 shrink-0" />;
 }
 
-// ── Table context menu (right-click) ──────────────────────────────────────────
+// ── Editor right-click context menu ───────────────────────────────────────────
 
-function TableContextMenu({ x, y, editor, onClose }: {
-  x: number; y: number; editor: Editor; onClose: () => void;
+function EditorContextMenu({ x, y, inTable, editor, onClose }: {
+  x: number; y: number; inTable: boolean; editor: Editor; onClose: () => void;
 }) {
-  // Clamp so it doesn't go off screen at the bottom
-  const top = y + 160 > window.innerHeight ? y - 160 : y;
+  const MENU_H = inTable ? 440 : 300;
+  const top  = Math.min(y, window.innerHeight - MENU_H - 8);
+  const left = Math.min(x, window.innerWidth - 224 - 8);
+
+  const ctxBtnClass = "flex items-center gap-2.5 px-3 py-1.5 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--text)] w-full text-left transition-colors rounded-lg";
 
   return (
     <>
       <div className="fixed inset-0 z-[399]" onClick={onClose} onContextMenu={(e) => { e.preventDefault(); onClose(); }} />
       <div
-        className="fixed z-[400] bg-[var(--surface-2)] border border-[var(--border-light)] rounded-xl shadow-2xl py-1 min-w-[200px]"
-        style={{ left: x, top }}
+        className="fixed z-[400] bg-[var(--surface-2)] border border-[var(--border-light)] rounded-xl shadow-2xl py-1.5 min-w-[220px] max-h-[80vh] overflow-y-auto"
+        style={{ left, top }}
       >
-        <p className="px-3 pt-1 pb-2 text-[10px] text-[var(--text-faint)] uppercase tracking-widest border-b border-[var(--border)] mb-1">
-          Tableau
+        {/* Slash command items */}
+        <p className="px-3 pt-0.5 pb-1.5 text-[10px] text-[var(--text-faint)] uppercase tracking-widest">
+          Insérer
         </p>
-        <button
-          onClick={() => { editor.chain().focus().addRowAfter().run(); onClose(); }}
-          className="flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--text)] w-full text-left transition-colors"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="12" y1="15" x2="12" y2="21"/></svg>
-          Ajouter une ligne
-        </button>
-        <button
-          onClick={() => { editor.chain().focus().addColumnAfter().run(); onClose(); }}
-          className="flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--text)] w-full text-left transition-colors"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="15" y1="12" x2="21" y2="12"/></svg>
-          Ajouter une colonne
-        </button>
-        <button
-          onClick={() => { editor.chain().focus().deleteRow().run(); onClose(); }}
-          className="flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--danger)] w-full text-left transition-colors"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-          Supprimer la ligne
-        </button>
-        <button
-          onClick={() => { editor.chain().focus().deleteColumn().run(); onClose(); }}
-          className="flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--danger)] w-full text-left transition-colors"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
-          Supprimer la colonne
-        </button>
-        <div className="border-t border-[var(--border)] my-1" />
-        <button
-          onClick={() => { editor.chain().focus().deleteTable().run(); onClose(); }}
-          className="flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--danger)] hover:bg-red-900/20 w-full text-left transition-colors"
-        >
-          <TrashIcon size={14} /> Supprimer le tableau
-        </button>
+        <div className="px-1.5 flex flex-col gap-0.5">
+          {SLASH_ITEMS.map((item) => (
+            <button
+              key={item.title}
+              onClick={() => { item.command(editor); onClose(); }}
+              className={ctxBtnClass}
+            >
+              <span className="w-5 h-5 flex items-center justify-center text-xs text-[var(--text-faint)] font-mono shrink-0">
+                {item.icon}
+              </span>
+              <span className="flex flex-col items-start">
+                <span className="text-[var(--text)] text-xs font-medium leading-tight">{item.title}</span>
+                <span className="text-[var(--text-faint)] text-[10px] leading-tight">{item.description}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Table section — only when cursor is inside a table */}
+        {inTable && (
+          <>
+            <div className="border-t border-[var(--border)] my-1.5 mx-3" />
+            <p className="px-3 pb-1.5 text-[10px] text-[var(--text-faint)] uppercase tracking-widest">
+              Tableau
+            </p>
+            <div className="px-1.5 flex flex-col gap-0.5">
+              <button onClick={() => { editor.chain().focus().addRowAfter().run(); onClose(); }} className={ctxBtnClass}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="12" y1="15" x2="12" y2="21"/></svg>
+                Ajouter une ligne
+              </button>
+              <button onClick={() => { editor.chain().focus().addColumnAfter().run(); onClose(); }} className={ctxBtnClass}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="15" y1="12" x2="21" y2="12"/></svg>
+                Ajouter une colonne
+              </button>
+              <button onClick={() => { editor.chain().focus().deleteRow().run(); onClose(); }} className={`${ctxBtnClass} hover:text-[var(--danger)]`}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                Supprimer la ligne
+              </button>
+              <button onClick={() => { editor.chain().focus().deleteColumn().run(); onClose(); }} className={`${ctxBtnClass} hover:text-[var(--danger)]`}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
+                Supprimer la colonne
+              </button>
+              <button
+                onClick={() => { editor.chain().focus().deleteTable().run(); onClose(); }}
+                className="flex items-center gap-2.5 px-3 py-1.5 text-sm text-[var(--danger)] hover:bg-red-900/20 w-full text-left transition-colors rounded-lg"
+              >
+                <TrashIcon size={13} /> Supprimer le tableau
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </>
   );

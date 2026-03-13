@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Sidebar from "./Sidebar";
 import FolderView from "./FolderView";
@@ -28,9 +28,17 @@ export type AppView = "notes" | "kanban" | "calendar" | "tags" | "stats" | "tras
 export default function AppShell() {
   useAppInit();
   const { activePageId, setActivePage, pages } = usePagesStore();
+
   const [view, setView]               = useState<AppView>("notes");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+
+  // Suppress native browser context menu everywhere
+  useEffect(() => {
+    const handler = (e: MouseEvent) => e.preventDefault();
+    document.addEventListener("contextmenu", handler);
+    return () => document.removeEventListener("contextmenu", handler);
+  }, []);
 
   const activePage = pages.find((p) => p.id === activePageId);
 
@@ -83,7 +91,7 @@ export default function AppShell() {
 
             {/* Vue éditeur (feuilles uniquement) */}
             {activePage && !activePage.isFolder && (
-              <div className="w-[75%] min-w-[480px]">
+              <div className="w-[90%] mx-auto">
                 <PageBreadcrumb
                   pages={pages}
                   activePageId={activePage.id}
@@ -136,6 +144,7 @@ export default function AppShell() {
           </div>
         )}
       </main>
+
     </div>
   );
 }
