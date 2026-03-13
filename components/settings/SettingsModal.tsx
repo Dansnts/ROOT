@@ -671,14 +671,24 @@ function DataTab({ onClose, importRef }: {
   onClose: () => void;
   importRef: React.RefObject<HTMLInputElement | null>;
 }) {
-  const [nukeText, setNukeText]           = useState("");
-  const [busy, setBusy]                   = useState(false);
-  const [status, setStatus]               = useState<string | null>(null);
-  const [showPwPrompt, setShowPwPrompt]   = useState(false);
-  const [pwInput, setPwInput]             = useState("");
-  const [pwError, setPwError]             = useState<string | null>(null);
+  const [nukeText, setNukeText] = useState("");
+  const [busy, setBusy]         = useState(false);
+  const [status, setStatus]     = useState<string | null>(null);
 
-  async function verifyAndExport() {
+  // Modal de confirmation unifié export / import
+  const [modal, setModal] = useState<{ mode: "export" | "import"; file?: File } | null>(null);
+  const [pwInput, setPwInput] = useState("");
+  const [pwError, setPwError] = useState<string | null>(null);
+
+  function openModal(mode: "export" | "import", file?: File) {
+    setModal({ mode, file });
+    setPwInput("");
+    setPwError(null);
+  }
+  function closeModal() { setModal(null); setPwInput(""); setPwError(null); }
+
+  async function handleConfirm() {
+    if (!modal) return;
     setPwError(null);
     setBusy(true);
     try {
@@ -688,151 +698,182 @@ function DataTab({ onClose, importRef }: {
       const key   = await vaultService.deriveKey(pwInput, salt);
       const valid = await vaultService.verifyKey(key, meta.verifier);
       if (!valid) { setPwError("Mot de passe incorrect."); setBusy(false); return; }
-      await exportBackup();
-      setStatus("Backup téléchargé.");
-      setShowPwPrompt(false);
-      setPwInput("");
-    } catch {
-      setStatus("Erreur lors de l'export.");
-    } finally {
-      setBusy(false);
-    }
-  }
 
-  async function handleExport() {
-    setShowPwPrompt(true);
-    setPwInput("");
-    setPwError(null);
-  }
-
-  async function handleImport(file: File) {
-    setBusy(true);
-    setStatus("Import en cours…");
-    try {
-      await importBackup(file, setStatus);
-      setStatus("Import terminé — rechargement…");
-      setTimeout(() => window.location.reload(), 800);
+      if (modal.mode === "export") {
+        closeModal();
+        await exportBackup();
+        setStatus("Backup téléchargé.");
+      } else if (modal.mode === "import" && modal.file) {
+        const file = modal.file;
+        closeModal();
+        setStatus("Import en cours…");
+        await importBackup(file, setStatus);
+        setStatus("Import terminé — rechargement…");
+        setTimeout(() => window.location.reload(), 800);
+      }
     } catch (err) {
-      setStatus(`Erreur : ${err instanceof Error ? err.message : String(err)}`);
+      setPwError(`Erreur : ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setBusy(false);
-      if (importRef.current) importRef.current.value = "";
     }
   }
 
   async function handleNuke() {
     if (nukeText !== "NUKE") return;
     setBusy(true);
-    try {
-      await nukeVault();
-    } catch {
-      setBusy(false);
-      setStatus("Erreur lors de la suppression.");
-    }
+    try { await nukeVault(); }
+    catch { setBusy(false); setStatus("Erreur lors de la suppression."); }
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <>
+      {/* ── Modal de confirmation ────────────────────────────────────────────── */}
+      {modal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm mx-4 bg-[var(--surface-2)] border border-[var(--border-light)] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
 
-      {/* Backup export */}
-      <div className="flex flex-col gap-2">
-        <h3 className="text-sm font-medium text-[var(--text)]">Sauvegarder</h3>
-        <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-          Exporte toutes vos données déchiffrées dans un fichier JSON portable.
-          Ce backup peut être importé par n&apos;importe quel vault, quel que soit le Master Password.
-        </p>
-        {!showPwPrompt ? (
-          <button onClick={handleExport} disabled={busy} className={btnCls}>
-            ↓ Télécharger le backup (.json)
-          </button>
-        ) : (
-          <div className="flex flex-col gap-2 p-3 bg-[var(--surface-3)] border border-[var(--border-light)] rounded-xl">
-            <p className="text-xs text-[var(--text-muted)]">Confirmez votre Master Password pour continuer :</p>
-            <input
-              type="password"
-              autoFocus
-              value={pwInput}
-              onChange={(e) => { setPwInput(e.target.value); setPwError(null); }}
-              onKeyDown={(e) => { if (e.key === "Enter") verifyAndExport(); if (e.key === "Escape") setShowPwPrompt(false); }}
-              placeholder="Master Password"
-              className={inputCls}
-            />
-            {pwError && <p className="text-xs text-red-400">{pwError}</p>}
-            <div className="flex gap-2">
-              <button onClick={verifyAndExport} disabled={busy || !pwInput} className={`${btnCls} flex items-center gap-1.5`}>
-                {busy ? "Vérification…" : <><CheckIcon size={13} /> Confirmer</>}
+            {/* Header */}
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--border)]">
+              <span className="text-base">{modal.mode === "import" ? "⚠️" : "🔒"}</span>
+              <h3 className="text-sm font-semibold text-[var(--text)]">
+                {modal.mode === "export" ? "Confirmer l'export" : "Confirmer la restauration"}
+              </h3>
+              <button onClick={closeModal} className="ml-auto text-[var(--text-faint)] hover:text-[var(--text-muted)] w-6 h-6 flex items-center justify-center">
+                <XIcon size={14} />
               </button>
-              <button onClick={() => { setShowPwPrompt(false); setPwInput(""); setPwError(null); }} className="text-xs text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors px-2">
+            </div>
+
+            <div className="flex flex-col gap-4 p-5">
+              {/* Avertissement import */}
+              {modal.mode === "import" && (
+                <div className="flex gap-3 p-3 rounded-xl bg-orange-500/10 border border-orange-500/25">
+                  <span className="text-orange-400 text-lg shrink-0 leading-none mt-0.5">⚠</span>
+                  <p className="text-xs text-orange-300 leading-relaxed">
+                    <strong className="font-semibold">Toutes vos données actuelles seront effacées</strong> — pages, blocs,
+                    événements, paramètres — et remplacées par le contenu du fichier sélectionné.
+                    Cette opération est <strong className="font-semibold">irréversible</strong>.
+                  </p>
+                </div>
+              )}
+
+              <p className="text-xs text-[var(--text-muted)]">
+                Entrez votre Master Password pour confirmer.
+              </p>
+
+              <input
+                type="password"
+                autoFocus
+                value={pwInput}
+                onChange={(e) => { setPwInput(e.target.value); setPwError(null); }}
+                onKeyDown={(e) => { if (e.key === "Enter") handleConfirm(); if (e.key === "Escape") closeModal(); }}
+                placeholder="Master Password"
+                className={inputCls}
+              />
+
+              {pwError && (
+                <p className="text-xs text-red-400 bg-red-900/20 px-3 py-2 rounded-lg">{pwError}</p>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-2 px-5 py-4 border-t border-[var(--border)]">
+              <button onClick={closeModal} className="px-4 py-2 rounded-lg text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] transition-colors">
                 Annuler
+              </button>
+              <button
+                onClick={handleConfirm}
+                disabled={busy || !pwInput}
+                className={`ml-auto flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 ${
+                  modal.mode === "import"
+                    ? "bg-orange-600/80 hover:bg-orange-600 text-white border border-orange-500/40"
+                    : "bg-[var(--accent)]/20 hover:bg-[var(--accent)]/30 text-[var(--accent)] border border-[var(--accent)]/30"
+                }`}
+              >
+                {busy ? "Vérification…" : <><CheckIcon size={13} />{modal.mode === "export" ? "Exporter" : "Restaurer"}</>}
               </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      <div className="border-t border-[var(--border)]" />
+      <div className="flex flex-col gap-6">
 
-      {/* Backup import */}
-      <div className="flex flex-col gap-2">
-        <h3 className="text-sm font-medium text-[var(--text)]">Restaurer</h3>
-        <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-          Importe un backup ROOT (.json). Les données actuelles seront remplacées
-          et ré-chiffrées avec le Master Password de ce vault.
-        </p>
-        <input
-          ref={importRef}
-          type="file"
-          accept=".json,application/json"
-          className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImport(f); }}
-        />
-        <button
-          onClick={() => importRef.current?.click()}
-          disabled={busy}
-          className={btnCls}
-        >
-          ↑ Importer un backup (.json)
-        </button>
-      </div>
-
-      <div className="border-t border-[var(--border)]" />
-
-      {/* Nuke */}
-      <div className="flex flex-col gap-2">
-        <h3 className="text-sm font-medium text-red-400">Zone de danger</h3>
-        <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-          Efface intégralement toutes vos données (vault, pages, blocs, paramètres).
-          Cette action est <strong className="text-[var(--text)]">irréversible</strong>.
-          Tapez <code className="font-mono text-red-400 bg-red-900/20 px-1 rounded">NUKE</code> pour confirmer.
-        </p>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={nukeText}
-            onChange={(e) => setNukeText(e.target.value)}
-            placeholder="NUKE"
-            className={`${inputCls} font-mono text-red-400 flex-1`}
-          />
-          <button
-            onClick={handleNuke}
-            disabled={busy || nukeText !== "NUKE"}
-            className="px-4 py-2 rounded-lg text-sm bg-red-900/30 border border-red-700/40 text-red-400 hover:bg-red-900/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed font-medium"
-          >
-            Tout effacer
+        {/* Backup export */}
+        <div className="flex flex-col gap-2">
+          <h3 className="text-sm font-medium text-[var(--text)]">Sauvegarder</h3>
+          <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+            Exporte toutes vos données déchiffrées dans un fichier JSON portable.
+            Ce backup peut être importé par n&apos;importe quel vault, quel que soit le Master Password.
+          </p>
+          <button onClick={() => openModal("export")} disabled={busy} className={btnCls}>
+            ↓ Télécharger le backup (.json)
           </button>
         </div>
-      </div>
 
-      {status && (
-        <p className={`text-xs px-3 py-2 rounded-lg ${
-          status.includes("Erreur") || status.includes("invalide") || status.includes("corrompu")
-            ? "bg-red-900/20 text-red-400"
-            : "bg-[var(--surface-3)] text-[var(--text-muted)]"
-        }`}>
-          {status}
-        </p>
-      )}
-    </div>
+        <div className="border-t border-[var(--border)]" />
+
+        {/* Backup import */}
+        <div className="flex flex-col gap-2">
+          <h3 className="text-sm font-medium text-[var(--text)]">Restaurer</h3>
+          <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+            Importe un backup ROOT (.json). Les données actuelles seront <strong className="text-[var(--text)]">entièrement remplacées</strong> et
+            ré-chiffrées avec le Master Password de ce vault.
+          </p>
+          <input
+            ref={importRef}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (importRef.current) importRef.current.value = "";
+              if (f) openModal("import", f);
+            }}
+          />
+          <button onClick={() => importRef.current?.click()} disabled={busy} className={btnCls}>
+            ↑ Importer un backup (.json)
+          </button>
+        </div>
+
+        <div className="border-t border-[var(--border)]" />
+
+        {/* Nuke */}
+        <div className="flex flex-col gap-2">
+          <h3 className="text-sm font-medium text-red-400">Zone de danger</h3>
+          <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+            Efface intégralement toutes vos données (vault, pages, blocs, paramètres).
+            Cette action est <strong className="text-[var(--text)]">irréversible</strong>.
+            Tapez <code className="font-mono text-red-400 bg-red-900/20 px-1 rounded">NUKE</code> pour confirmer.
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={nukeText}
+              onChange={(e) => setNukeText(e.target.value)}
+              placeholder="NUKE"
+              className={`${inputCls} font-mono text-red-400 flex-1`}
+            />
+            <button
+              onClick={handleNuke}
+              disabled={busy || nukeText !== "NUKE"}
+              className="px-4 py-2 rounded-lg text-sm bg-red-900/30 border border-red-700/40 text-red-400 hover:bg-red-900/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed font-medium"
+            >
+              Tout effacer
+            </button>
+          </div>
+        </div>
+
+        {status && (
+          <p className={`text-xs px-3 py-2 rounded-lg ${
+            status.includes("Erreur") || status.includes("invalide") || status.includes("corrompu")
+              ? "bg-red-900/20 text-red-400"
+              : "bg-[var(--surface-3)] text-[var(--text-muted)]"
+          }`}>
+            {status}
+          </p>
+        )}
+      </div>
+    </>
   );
 }
 
