@@ -19,6 +19,7 @@ export const UNCATEGORIZED_ID = "__uncategorized__";
 export const LS_KEYS = {
   theme: "root-theme",
   username: "root-username",
+  onboardingDone: "root-onboarding-done",
 } as const;
 
 export const DB_KEYS = {

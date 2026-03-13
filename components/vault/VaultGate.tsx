@@ -4,7 +4,9 @@ import { useEffect, useState, useRef, type FC } from "react";
 import { useVaultStore } from "@/stores/vaultStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useTheme } from "@/hooks/useTheme";
+import { LS_KEYS } from "@/lib/constants";
 import { SunIcon, CloudSunIcon, MoonIcon, StarsIcon } from "@/components/ui/icons";
+import OnboardingModal from "@/components/onboarding/OnboardingModal";
 
 type Mode = "checking" | "init" | "unlock" | "loading";
 
@@ -43,6 +45,7 @@ export default function VaultGate() {
   const { loadSettings, saveUserName } = useSettingsStore();
   useTheme(); // applique data-theme et data-accent depuis localStorage
   const [mode, setMode]           = useState<Mode>("checking");
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [password, setPassword]   = useState("");
   const [confirm, setConfirm]     = useState("");
   const [nameInput, setNameInput] = useState("");
@@ -64,7 +67,14 @@ export default function VaultGate() {
   useEffect(() => {
     checkVaultExists().then(() => {
       const s = useVaultStore.getState().status;
-      setMode(s === "uninitialized" ? "init" : "unlock");
+      const isNew = s === "uninitialized";
+      setMode(isNew ? "init" : "unlock");
+      if (isNew) {
+        try {
+          const done = localStorage.getItem(LS_KEYS.onboardingDone);
+          if (!done) setShowOnboarding(true);
+        } catch {}
+      }
       setTimeout(() => inputRef.current?.focus(), 50);
     });
   }, [checkVaultExists]);
@@ -111,6 +121,10 @@ export default function VaultGate() {
   const showGreeting = mode === "unlock" && storedName;
 
   return (
+    <>
+    {showOnboarding && (
+      <OnboardingModal onDone={() => { setShowOnboarding(false); setTimeout(() => inputRef.current?.focus(), 50); }} />
+    )}
     <div className="flex items-center justify-center min-h-screen bg-[var(--bg)]">
       <div className="w-full max-w-sm px-4">
 
@@ -215,6 +229,7 @@ export default function VaultGate() {
         </p>
       </div>
     </div>
+    </>
   );
 }
 

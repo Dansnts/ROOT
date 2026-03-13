@@ -5,6 +5,7 @@ import Cropper from "react-easy-crop";
 import type { Area } from "react-easy-crop";
 import { XIcon, RefreshIcon, CheckIcon } from "@/components/ui/icons";
 import { useSettingsStore } from "@/stores/settingsStore";
+import OnboardingModal from "@/components/onboarding/OnboardingModal";
 import { useCategoriesStore } from "@/stores/categoriesStore";
 import { testCalDAVConnection, discoverCalendars, type DiscoveredCalendar } from "@/lib/CalDAVService";
 import {
@@ -130,6 +131,7 @@ function ProfilTab({
 }) {
   const [value, setValue]         = useState(userName ?? "");
   const [saved, setSaved]         = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   // URL objet temporaire de l'image sélectionnée (libérée après crop)
   const [cropSrc, setCropSrc]     = useState<string | null>(null);
   const avatarInputRef            = useRef<HTMLInputElement>(null);
@@ -175,6 +177,11 @@ function ProfilTab({
         />
       )}
 
+      {/* Onboarding modal (relecture) */}
+      {showOnboarding && (
+        <OnboardingModal dismissible onDone={() => setShowOnboarding(false)} />
+      )}
+
       <div className="flex flex-col gap-6">
         {/* Avatar */}
         <div className="flex flex-col gap-3">
@@ -212,6 +219,19 @@ function ProfilTab({
               )}
             </div>
           </div>
+        </div>
+
+        <div className="border-t border-[var(--border)]" />
+
+        {/* Onboarding */}
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-[var(--text-faint)] uppercase tracking-wider">Confidentialité & contraintes</p>
+          <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+            Relisez les engagements et contraintes de ROOT à tout moment.
+          </p>
+          <button onClick={() => setShowOnboarding(true)} className={btnCls}>
+            Relire l&apos;onboarding
+          </button>
         </div>
 
         <div className="border-t border-[var(--border)]" />
