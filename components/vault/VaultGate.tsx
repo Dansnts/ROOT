@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, type FC } from "react";
 import { useVaultStore } from "@/stores/vaultStore";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { useTheme } from "@/hooks/useTheme";
 import { SunIcon, CloudSunIcon, MoonIcon, StarsIcon } from "@/components/ui/icons";
 
 type Mode = "checking" | "init" | "unlock" | "loading";
@@ -40,6 +41,7 @@ function randomFrom<T>(arr: T[]): T {
 export default function VaultGate() {
   const { checkVaultExists, initVault, unlock, status } = useVaultStore();
   const { loadSettings, saveUserName } = useSettingsStore();
+  useTheme(); // applique data-theme et data-accent depuis localStorage
   const [mode, setMode]           = useState<Mode>("checking");
   const [password, setPassword]   = useState("");
   const [confirm, setConfirm]     = useState("");
