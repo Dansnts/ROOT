@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { Pixelify_Sans } from "next/font/google";
+import { Roboto } from "next/font/google";
 import { Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
-const pixelifySans = Pixelify_Sans({
-  variable: "--font-pixelify",
+const roboto = Roboto({
+  variable: "--font-roboto",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   display: "swap",
@@ -41,7 +41,7 @@ export default function RootLayout({
           })();
         `}} />
       </head>
-      <body className={`${pixelifySans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${roboto.variable} ${geistMono.variable} antialiased`}>
         {children}
         <Toaster />
       </body>
