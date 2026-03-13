@@ -54,6 +54,8 @@ interface SidebarProps {
   onCategorySelect: (id: string | null) => void;
 }
 
+const ROOT_DROP_ID = "__root__";
+
 // ── Helpers DnD ───────────────────────────────────────────────────────────────
 
 function isDescendantOf(targetId: string, ancestorId: string, pages: DecryptedPage[]): boolean {
@@ -134,8 +136,17 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
     if (!over || active.id === over.id) return;
 
     const draggedId = String(active.id);
-    const targetId  = String(over.id);
-    const target    = pages.find((p) => p.id === targetId);
+
+    // Zone de dépôt "racine"
+    if (String(over.id) === ROOT_DROP_ID) {
+      const rootItems = pages.filter((p) => p.parentId === null && !p.isDeleted);
+      const maxOrder  = rootItems.length > 0 ? Math.max(...rootItems.map((p) => p.order)) : -1;
+      movePage(draggedId, maxOrder + 1, null);
+      return;
+    }
+
+    const targetId = String(over.id);
+    const target   = pages.find((p) => p.id === targetId);
     if (!target) return;
     if (isDescendantOf(targetId, draggedId, pages)) return;
 
@@ -299,6 +310,7 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
                 onSelect={setActivePage}
               />
             ))}
+            {dragId && <RootDropZone />}
           </nav>
 
           <DragOverlay dropAnimation={null}>
@@ -367,6 +379,24 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
       </div>
     </aside>
     </>
+  );
+}
+
+// ── Zone de dépôt racine (visible uniquement pendant un drag) ─────────────────
+
+function RootDropZone() {
+  const { setNodeRef, isOver } = useDroppable({ id: ROOT_DROP_ID });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`mx-2 my-1 h-8 rounded-lg border border-dashed flex items-center justify-center text-[11px] transition-colors ${
+        isOver
+          ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
+          : "border-[var(--border-light)] text-[var(--text-faint)]"
+      }`}
+    >
+      ↑ Déplacer à la racine
+    </div>
   );
 }
 
