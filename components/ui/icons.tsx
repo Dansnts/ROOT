@@ -81,6 +81,13 @@ export function UndoIcon({ size = 14, className = "" }: IconProps) {
   </>);
 }
 
+export function RedoIcon({ size = 14, className = "" }: IconProps) {
+  return icon(size, className, <>
+    <polyline points="23 4 23 10 17 10" />
+    <path d="M20.49 15a9 9 0 1 1-17-.49" />
+  </>);
+}
+
 // ── Navigation icons ──────────────────────────────────────────────────────────
 
 export function ChevronDownIcon({ size = 14, className = "" }: IconProps) {

@@ -19,7 +19,7 @@ import type { Editor } from "@tiptap/core";
 import { SlashCommandExtension } from "./SlashCommandExtension";
 import { loadPageAsDocument, savePageDocument } from "@/lib/BlockService";
 import { useVaultStore } from "@/stores/vaultStore";
-import { LinkIcon } from "@/components/ui/icons";
+import { LinkIcon, UndoIcon, RedoIcon, TrashIcon, TableIcon } from "@/components/ui/icons";
 
 interface Props {
   pageId: string;
@@ -52,6 +52,9 @@ export default function BlockEditor({ pageId }: Props) {
   const [tablePicker, setTablePicker] = useState<{
     open: boolean; x: number; y: number; editor: Editor | null;
   }>({ open: false, x: 0, y: 0, editor: null });
+
+  // Table context menu (right-click)
+  const [tableCtxMenu, setTableCtxMenu] = useState<{ x: number; y: number } | null>(null);
 
   // ImageUrlPicker state
   const [imagePicker, setImagePicker] = useState<{
@@ -156,21 +159,46 @@ export default function BlockEditor({ pageId }: Props) {
   }, [pageId, editor, isUnlocked]);
 
   const handleContainerClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    // Only focus at end when clicking the padding area, not the editor content itself
-    if (e.target === e.currentTarget) {
-      editor?.commands.focus("end");
+    if (e.target === e.currentTarget) editor?.commands.focus("end");
+  }, [editor]);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    if (!editor) return;
+    if (editor.isActive("table")) {
+      e.preventDefault();
+      setTableCtxMenu({ x: e.clientX, y: e.clientY });
     }
   }, [editor]);
 
   if (!isUnlocked) return null;
 
   return (
-    <div
-      className="flex-1 px-16 py-12 cursor-text min-h-screen"
-      onClick={handleContainerClick}
-    >
-      {editor && <BubbleToolbar editor={editor} />}
-      <EditorContent editor={editor} />
+    <>
+      <div
+        className="flex-1 px-16 py-12 cursor-text min-h-screen"
+        onClick={handleContainerClick}
+        onContextMenu={handleContextMenu}
+      >
+        {editor && <BubbleToolbar editor={editor} />}
+        <EditorContent editor={editor} />
+      </div>
+
+      {/* Floating editor hub */}
+      {editor && createPortal(
+        <FloatingHub editor={editor} />,
+        document.body,
+      )}
+
+      {/* Table right-click context menu */}
+      {tableCtxMenu && createPortal(
+        <TableContextMenu
+          x={tableCtxMenu.x}
+          y={tableCtxMenu.y}
+          editor={editor!}
+          onClose={() => setTableCtxMenu(null)}
+        />,
+        document.body,
+      )}
 
       {tablePicker.open && tablePicker.editor && createPortal(
         <TablePicker
@@ -191,7 +219,184 @@ export default function BlockEditor({ pageId }: Props) {
         />,
         document.body,
       )}
+    </>
+  );
+}
+
+// ── Floating hub ──────────────────────────────────────────────────────────────
+
+function FloatingHub({ editor }: { editor: Editor }) {
+  // Re-render on each editor transaction so disabled states stay accurate
+  const [, forceUpdate] = useState(0);
+  useEffect(() => {
+    const handler = () => forceUpdate((n) => n + 1);
+    editor.on("transaction", handler);
+    return () => { editor.off("transaction", handler); };
+  }, [editor]);
+
+  const inTable = editor.isActive("table");
+  const hasSel  = !editor.state.selection.empty;
+
+  return (
+    <div
+      className="fixed bottom-5 z-[150] flex justify-center pointer-events-none"
+      style={{ left: 360, right: 0 }}
+    >
+      <div className="pointer-events-auto flex items-center gap-0.5 px-2 py-1.5 rounded-2xl bg-[var(--surface-2)]/90 border border-[var(--border-light)] shadow-2xl backdrop-blur-md">
+
+        {/* Historique */}
+        <HubBtn
+          onClick={() => editor.chain().focus().undo().run()}
+          disabled={!editor.can().undo()}
+          title="Annuler (Ctrl+Z)"
+        >
+          <UndoIcon size={15} />
+        </HubBtn>
+        <HubBtn
+          onClick={() => editor.chain().focus().redo().run()}
+          disabled={!editor.can().redo()}
+          title="Rétablir (Ctrl+Y)"
+        >
+          <RedoIcon size={15} />
+        </HubBtn>
+
+        <HubDivider />
+
+        {/* Formatage texte */}
+        <HubBtn active={editor.isActive("bold")}      onClick={() => editor.chain().focus().toggleBold().run()}      title="Gras (Ctrl+B)"><span className="font-bold text-xs">B</span></HubBtn>
+        <HubBtn active={editor.isActive("italic")}    onClick={() => editor.chain().focus().toggleItalic().run()}    title="Italique (Ctrl+I)"><em className="text-xs">I</em></HubBtn>
+        <HubBtn active={editor.isActive("strike")}    onClick={() => editor.chain().focus().toggleStrike().run()}    title="Barré"><s className="text-xs">S</s></HubBtn>
+        <HubBtn active={editor.isActive("code")}      onClick={() => editor.chain().focus().toggleCode().run()}      title="Code"><span className="text-[11px] font-mono">{"`"}</span></HubBtn>
+
+        <HubDivider />
+
+        {/* Blocs */}
+        <HubBtn active={editor.isActive("heading", { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title="Titre 1"><span className="text-[11px] font-bold">H1</span></HubBtn>
+        <HubBtn active={editor.isActive("heading", { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="Titre 2"><span className="text-[11px] font-bold">H2</span></HubBtn>
+        <HubBtn active={editor.isActive("bulletList")}  onClick={() => editor.chain().focus().toggleBulletList().run()}  title="Liste">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="9" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="9" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1" fill="currentColor" stroke="none"/></svg>
+        </HubBtn>
+        <HubBtn active={editor.isActive("taskList")} onClick={() => editor.chain().focus().toggleTaskList().run()} title="Liste de tâches">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="6" height="6" rx="1"/><polyline points="5 8 6.5 9.5 9 6.5" /><line x1="13" y1="8" x2="21" y2="8"/><rect x="3" y="14" width="6" height="6" rx="1"/><line x1="13" y1="17" x2="21" y2="17"/></svg>
+        </HubBtn>
+
+        <HubDivider />
+
+        {/* Actions contextuelles */}
+        {inTable && (
+          <HubBtn
+            onClick={() => editor.chain().focus().deleteTable().run()}
+            title="Supprimer le tableau"
+            danger
+          >
+            <TableIcon size={14} />
+          </HubBtn>
+        )}
+        <HubBtn
+          onClick={() => {
+            if (hasSel) editor.chain().focus().deleteSelection().run();
+            else editor.chain().focus().clearNodes().run();
+          }}
+          title={hasSel ? "Supprimer la sélection" : "Vider le bloc courant"}
+          danger
+        >
+          <TrashIcon size={14} />
+        </HubBtn>
+      </div>
     </div>
+  );
+}
+
+function HubBtn({
+  children, onClick, disabled, active, title, danger,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  active?: boolean;
+  title?: string;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={[
+        "w-8 h-8 flex items-center justify-center rounded-xl text-sm transition-colors",
+        disabled ? "opacity-25 cursor-not-allowed" : "cursor-pointer",
+        active
+          ? "bg-[var(--accent)]/20 text-[var(--accent)]"
+          : danger
+          ? "text-[var(--text-faint)] hover:bg-red-500/15 hover:text-[var(--danger)]"
+          : "text-[var(--text-faint)] hover:bg-[var(--surface-3)] hover:text-[var(--text-muted)]",
+      ].filter(Boolean).join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
+
+function HubDivider() {
+  return <div className="w-px h-4 bg-[var(--border-light)] mx-0.5 shrink-0" />;
+}
+
+// ── Table context menu (right-click) ──────────────────────────────────────────
+
+function TableContextMenu({ x, y, editor, onClose }: {
+  x: number; y: number; editor: Editor; onClose: () => void;
+}) {
+  // Clamp so it doesn't go off screen at the bottom
+  const top = y + 160 > window.innerHeight ? y - 160 : y;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[399]" onClick={onClose} onContextMenu={(e) => { e.preventDefault(); onClose(); }} />
+      <div
+        className="fixed z-[400] bg-[var(--surface-2)] border border-[var(--border-light)] rounded-xl shadow-2xl py-1 min-w-[200px]"
+        style={{ left: x, top }}
+      >
+        <p className="px-3 pt-1 pb-2 text-[10px] text-[var(--text-faint)] uppercase tracking-widest border-b border-[var(--border)] mb-1">
+          Tableau
+        </p>
+        <button
+          onClick={() => { editor.chain().focus().addRowAfter().run(); onClose(); }}
+          className="flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--text)] w-full text-left transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="12" y1="15" x2="12" y2="21"/></svg>
+          Ajouter une ligne
+        </button>
+        <button
+          onClick={() => { editor.chain().focus().addColumnAfter().run(); onClose(); }}
+          className="flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--text)] w-full text-left transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="15" y1="12" x2="21" y2="12"/></svg>
+          Ajouter une colonne
+        </button>
+        <button
+          onClick={() => { editor.chain().focus().deleteRow().run(); onClose(); }}
+          className="flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--danger)] w-full text-left transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          Supprimer la ligne
+        </button>
+        <button
+          onClick={() => { editor.chain().focus().deleteColumn().run(); onClose(); }}
+          className="flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--danger)] w-full text-left transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
+          Supprimer la colonne
+        </button>
+        <div className="border-t border-[var(--border)] my-1" />
+        <button
+          onClick={() => { editor.chain().focus().deleteTable().run(); onClose(); }}
+          className="flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--danger)] hover:bg-red-900/20 w-full text-left transition-colors"
+        >
+          <TrashIcon size={14} /> Supprimer le tableau
+        </button>
+      </div>
+    </>
   );
 }
 
