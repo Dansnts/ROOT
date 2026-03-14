@@ -417,12 +417,19 @@ function CalDAVTab({
 
   async function handleSync() {
     setBusy(true); setStatus("Synchronisation…");
+    // Sauvegarde silencieuse des entrées courantes (catégories, mode) avant sync
+    // pour que le sync utilise toujours les derniers mappings de l'UI.
+    // Si le mot de passe n'a pas été re-saisi, on conserve celui de la config existante.
+    const effectivePassword = password || config?.password || "";
+    if (effectivePassword) {
+      await onSave({ serverUrl: url, username, password: effectivePassword, calendars: calEntries });
+    }
     await onSync();
     const { syncStatus, lastSyncError } = useCalendarStore.getState();
     if (syncStatus === "error") {
       setStatus(lastSyncError ?? "Erreur lors de la synchronisation.");
     } else {
-      setStatus("Synchronisation terminée.");
+      setStatus("Configuration sauvegardée et synchronisation terminée.");
     }
     setBusy(false);
   }
