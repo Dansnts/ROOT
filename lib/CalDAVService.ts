@@ -579,7 +579,7 @@ export async function syncCalDAV(
             isDeleted: false,
           };
           await db.blocks.add(newBlock);
-          blockByUid.set(event.uid, newBlock as typeof pageBlocks[0]);
+          blockByUid.set(event.uid, newBlock as typeof allCalBlocks[0]);
           result.created++;
         }
       } catch {
