@@ -31,8 +31,10 @@ export interface CalDAVEvent {
   href: string;    // URL complète sur le serveur (/dav/.../event.ics)
   etag: string;
   summary: string;
-  dtstart: string; // YYYY-MM-DD
-  dtend?: string;  // YYYY-MM-DD
+  dtstart: string;     // YYYY-MM-DD
+  dtend?: string;      // YYYY-MM-DD
+  startTime?: string;  // HH:MM (absent si événement sur la journée entière)
+  endTime?: string;    // HH:MM
   description?: string;
   location?: string;
   status?: string;
@@ -43,6 +45,8 @@ export interface EventFormData {
   summary: string;
   dtstart: string;    // YYYY-MM-DD
   dtend?: string;     // YYYY-MM-DD
+  startTime?: string; // HH:MM — si absent : événement journée entière
+  endTime?: string;   // HH:MM
   description?: string;
   location?: string;
   caldavUrl?: string; // URL sur le serveur (pour PUT/DELETE)
@@ -53,6 +57,8 @@ export interface EventFormData {
 export interface CalDAVBlockProps {
   dueDate?: string;
   endDate?: string;
+  startTime?: string; // HH:MM
+  endTime?: string;   // HH:MM
   description?: string;
   location?: string;
   caldavEventId?: string;   // UID
@@ -98,6 +104,11 @@ function toICalDate(dateStr: string): string {
   return dateStr.replace(/-/g, "");
 }
 
+function toICalDateTime(dateStr: string, timeStr: string): string {
+  // dateStr: YYYY-MM-DD, timeStr: HH:MM → YYYYMMDDTHHMMSS (floating local time)
+  return dateStr.replace(/-/g, "") + "T" + timeStr.replace(":", "") + "00";
+}
+
 function nowStamp(): string {
   return new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
 }
@@ -106,8 +117,24 @@ function nowStamp(): string {
 
 export function generateICalString(event: EventFormData): string {
   const uid = event.uid ?? crypto.randomUUID();
-  const dtstart = toICalDate(event.dtstart);
-  const dtend = toICalDate(event.dtend ?? nextDay(event.dtstart));
+  const isAllDay = !event.startTime;
+
+  let dtstartLine: string;
+  let dtendLine: string;
+
+  if (isAllDay) {
+    const dts = toICalDate(event.dtstart);
+    const dte = toICalDate(event.dtend ?? nextDay(event.dtstart));
+    dtstartLine = `DTSTART;VALUE=DATE:${dts}`;
+    dtendLine   = `DTEND;VALUE=DATE:${dte}`;
+  } else {
+    const dts = toICalDateTime(event.dtstart, event.startTime!);
+    const endDate = event.dtend ?? event.dtstart;
+    const endTime = event.endTime ?? event.startTime!;
+    const dte = toICalDateTime(endDate, endTime);
+    dtstartLine = `DTSTART:${dts}`;
+    dtendLine   = `DTEND:${dte}`;
+  }
 
   const lines = [
     "BEGIN:VCALENDAR",
@@ -117,8 +144,8 @@ export function generateICalString(event: EventFormData): string {
     "BEGIN:VEVENT",
     `UID:${uid}`,
     `SUMMARY:${escapeICalText(event.summary)}`,
-    `DTSTART;VALUE=DATE:${dtstart}`,
-    `DTEND;VALUE=DATE:${dtend}`,
+    dtstartLine,
+    dtendLine,
     `DTSTAMP:${nowStamp()}`,
     event.description ? `DESCRIPTION:${escapeICalText(event.description)}` : null,
     event.location ? `LOCATION:${escapeICalText(event.location)}` : null,
@@ -160,6 +187,17 @@ function icalTimeToDateStr(t: ICAL.Time | null | undefined): string | undefined 
 }
 
 /**
+ * Convertit un ICAL.Time en string HH:MM (heure locale).
+ * Retourne undefined si l'événement est sur la journée entière (isDate = true).
+ */
+function icalTimeToTimeStr(t: ICAL.Time | null | undefined): string | undefined {
+  if (!t || t.isDate) return undefined;
+  const h = String(t.hour).padStart(2, "0");
+  const m = String(t.minute).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+/**
  * Parse un bloc iCal et retourne tous les événements :
  *  - Événement simple → tableau de 1 élément
  *  - Événement récurrent (RRULE) → toutes les occurrences développées sur
@@ -185,10 +223,12 @@ function parseICalToEvents(ical: string, href: string, etag: string): CalDAVEven
 
     // ── Événement simple ──────────────────────────────────────────────────────
     if (!ev.isRecurring()) {
-      const dtstart = icalTimeToDateStr(ev.startDate);
-      const dtend   = icalTimeToDateStr(ev.endDate);
+      const dtstart   = icalTimeToDateStr(ev.startDate);
+      const dtend     = icalTimeToDateStr(ev.endDate);
+      const startTime = icalTimeToTimeStr(ev.startDate);
+      const endTime   = icalTimeToTimeStr(ev.endDate);
       if (!dtstart) return [];
-      return [{ uid: baseUid, href, etag, summary, dtstart, dtend, description, location, status }];
+      return [{ uid: baseUid, href, etag, summary, dtstart, dtend, startTime, endTime, description, location, status }];
     }
 
     // ── Événement récurrent : développement des occurrences ───────────────────
@@ -218,13 +258,17 @@ function parseICalToEvents(ical: string, href: string, etag: string): CalDAVEven
       if (dateStr < rangeStartStr) continue;
       count++;
 
+      const occStartTime = icalTimeToTimeStr(next);
+
       // Calcul de dtend via ICAL.Duration (timezone-safe)
       let occEndStr: string | undefined;
+      let occEndTime_str: string | undefined;
       if (duration) {
         const occEndTime = next.clone();
         occEndTime.addDuration(duration);
         const candidate = icalTimeToDateStr(occEndTime);
         if (candidate && candidate !== dateStr) occEndStr = candidate;
+        occEndTime_str = icalTimeToTimeStr(occEndTime);
       }
 
       events.push({
@@ -234,6 +278,8 @@ function parseICalToEvents(ical: string, href: string, etag: string): CalDAVEven
         summary,
         dtstart: dateStr,
         dtend: occEndStr,
+        startTime: occStartTime,
+        endTime: occEndTime_str,
         description,
         location,
         status,
@@ -488,6 +534,8 @@ export async function syncCalDAV(
         const newProps: CalDAVBlockProps = {
           dueDate: event.dtstart,
           endDate: event.dtend,
+          startTime: event.startTime,
+          endTime: event.endTime,
           description: event.description,
           location: event.location,
           caldavEventId: event.uid,

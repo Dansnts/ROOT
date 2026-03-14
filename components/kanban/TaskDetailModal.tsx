@@ -117,8 +117,9 @@ export default function TaskDetailModal({ task, defaultStatus = "todo", onClose 
       <DrawerContent>
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] shrink-0">
-            <h3 className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-widest">
+          <div className="view-header flex items-center justify-between px-6 py-4 border-b border-[var(--border)] shrink-0">
+            <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-[0.14em] font-mono flex items-center gap-2">
+              <span className="text-[var(--accent)]">▸</span>
               {isNew ? "Nouvelle tâche" : "Tâche"}
             </h3>
             <DrawerClose
@@ -308,7 +309,7 @@ export default function TaskDetailModal({ task, defaultStatus = "todo", onClose 
             <button
               onClick={handleSave}
               disabled={saving || !title.trim()}
-              className="px-4 py-2 rounded-lg text-sm bg-[var(--surface-3)] border border-[var(--border-light)] text-[var(--text)] hover:border-[var(--accent)] transition-colors disabled:opacity-40"
+              className="btn-cta px-4 py-2 rounded-lg text-sm border font-medium disabled:opacity-40"
             >
               {saving ? "Sauvegarde…" : isNew ? "Créer" : "Enregistrer"}
             </button>
@@ -319,5 +320,5 @@ export default function TaskDetailModal({ task, defaultStatus = "todo", onClose 
   );
 }
 
-const inputCls = "w-full bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text)] text-sm outline-none focus:border-[var(--accent-hover)] transition-colors";
-const labelCls = "text-xs text-[var(--text-faint)] uppercase tracking-wider";
+const inputCls = "input-glow w-full bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text)] text-sm";
+const labelCls = "text-[10px] text-[var(--text-faint)] uppercase tracking-[0.12em] font-mono";

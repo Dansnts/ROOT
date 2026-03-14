@@ -94,9 +94,11 @@ export default function StatsView() {
     <div className="h-full overflow-y-auto px-6 py-6">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <h2 className="text-lg font-semibold text-[var(--text)]">Statistiques</h2>
-        <span className="text-xs text-[var(--text-faint)]">
-          {tasks.length} tâche{tasks.length !== 1 ? "s" : ""} · {tags.length} tag{tags.length !== 1 ? "s" : ""}
+        <h2 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-[0.14em] font-mono flex items-center gap-2">
+          <span className="text-[var(--accent)]">◆</span> Statistiques
+        </h2>
+        <span className="text-xs text-[var(--text-faint)] font-mono">
+          {tasks.length}t · {tags.length}k
         </span>
       </div>
 

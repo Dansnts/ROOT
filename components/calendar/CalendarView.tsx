@@ -64,7 +64,19 @@ export default function CalendarView() {
   const handleEventDrop = useCallback(async (info: EventDropArg) => {
     const newDate = info.event.startStr.split("T")[0];
     const endDate = info.event.endStr ? info.event.endStr.split("T")[0] : undefined;
-    await updateEvent(info.event.id, { dtstart: newDate, dtend: endDate });
+    // Preserve time component if the event had one before dragging
+    const startTimePart = info.event.startStr.includes("T")
+      ? info.event.startStr.split("T")[1]?.slice(0, 5)
+      : undefined;
+    const endTimePart = info.event.endStr?.includes("T")
+      ? info.event.endStr.split("T")[1]?.slice(0, 5)
+      : undefined;
+    await updateEvent(info.event.id, {
+      dtstart: newDate,
+      dtend: endDate,
+      startTime: startTimePart,
+      endTime: endTimePart,
+    });
   }, [updateEvent]);
 
   const handleDateClick = useCallback((info: DateClickArg) => {
@@ -77,18 +89,28 @@ export default function CalendarView() {
     if (ev) { setEditingEvent(ev); setCreateDate(null); }
   }, [events]);
 
-  const fcEvents = events.filter((e) => !hiddenCatIds.has(e.categoryId)).map((e) => ({
-    id: e.id,
-    title: e.title,
-    start: e.start,
-    // Pour les allDay events FullCalendar: end doit être > start (exclusif)
-    // Si end === start ou undefined → on laisse undefined (event 1 jour)
-    end: e.end && e.end > e.start ? e.end : undefined,
-    allDay: true,
-    backgroundColor: e.color,
-    borderColor: e.synced ? e.color : "rgba(255,255,255,0.15)",
-    extendedProps: { synced: e.synced, tags: e.tags ?? [] },
-  }));
+  const fcEvents = events.filter((e) => !hiddenCatIds.has(e.categoryId)).map((e) => {
+    const isTimed = !!e.startTime;
+    const start = isTimed ? `${e.start}T${e.startTime}` : e.start;
+    let end: string | undefined;
+    if (isTimed) {
+      const endDate = e.end ?? e.start;
+      end = `${endDate}T${e.endTime ?? e.startTime}`;
+    } else {
+      // allDay: FullCalendar end est exclusif → end > start requis
+      end = e.end && e.end > e.start ? e.end : undefined;
+    }
+    return {
+      id: e.id,
+      title: e.title,
+      start,
+      end,
+      allDay: !isTimed,
+      backgroundColor: e.color,
+      borderColor: e.synced ? e.color : "rgba(255,255,255,0.15)",
+      extendedProps: { synced: e.synced, tags: e.tags ?? [], startTime: e.startTime, endTime: e.endTime },
+    };
+  });
 
   const syncLabel = (() => {
     if (syncStatus === "syncing") return "Synchronisation…";
@@ -188,6 +210,8 @@ export default function CalendarView() {
           eventContent={(info) => {
             const evTags: string[] = info.event.extendedProps.tags ?? [];
             const tagDefs = evTags.map((id) => tagById.get(id)).filter(Boolean) as { id: string; name: string; color: string }[];
+            const startTime: string | undefined = info.event.extendedProps.startTime;
+            const endTime: string | undefined   = info.event.extendedProps.endTime;
             return (
               <div className="flex flex-col px-1 py-0.5 w-full overflow-hidden">
                 <div className="flex items-center gap-1">
@@ -196,6 +220,11 @@ export default function CalendarView() {
                   )}
                   <span className="truncate text-xs font-medium">{info.event.title}</span>
                 </div>
+                {startTime && (
+                  <span className="text-[10px] opacity-70 font-mono leading-tight">
+                    {startTime}{endTime && endTime !== startTime ? ` → ${endTime}` : ""}
+                  </span>
+                )}
                 {tagDefs.length > 0 && (
                   <div className="flex flex-wrap gap-0.5 mt-0.5">
                     {tagDefs.map((tag) => (

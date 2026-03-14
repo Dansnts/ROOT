@@ -30,23 +30,30 @@ export default function KanbanColumn({ id, label, accent, tasks }: Props) {
 
   return (
     <div className="flex flex-col w-72 min-w-[280px] shrink-0">
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-3 px-1">
-        <span
-          className="w-2 h-2 rounded-full shrink-0"
-          style={{ backgroundColor: accent }}
+      {/* Header — label + grand nombre fantôme + ligne dégradée */}
+      <div className="mb-3 px-1">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-[var(--text)] tracking-wide">{label}</h3>
+          <span
+            className="text-[28px] font-bold font-mono leading-none tabular-nums select-none"
+            style={{ color: accent, opacity: 0.28 }}
+          >
+            {tasks.length}
+          </span>
+        </div>
+        <div
+          className="mt-1.5 h-[1.5px] rounded-full"
+          style={{
+            background: `linear-gradient(90deg, ${accent} 0%, ${accent}55 45%, transparent 100%)`,
+          }}
         />
-        <h3 className="text-sm font-semibold text-[var(--text)]">{label}</h3>
-        <span className="ml-auto text-xs text-[var(--text-faint)] bg-[var(--surface-2)] px-2 py-0.5 rounded-full">
-          {tasks.length}
-        </span>
       </div>
 
       {/* Drop zone */}
       <div
         ref={setNodeRef}
-        className={`flex flex-col gap-2 flex-1 min-h-[120px] rounded-xl p-2 transition-colors ${
-          isOver ? "bg-[var(--surface-2)]" : "bg-[var(--surface)]"
+        className={`flex flex-col gap-2 flex-1 min-h-[120px] rounded-xl p-2 transition-all duration-200 ${
+          isOver ? "kanban-drop-active" : "bg-[var(--surface)]"
         }`}
       >
         {tasks.map((task) => (
@@ -86,9 +93,9 @@ export default function KanbanColumn({ id, label, accent, tasks }: Props) {
         ) : (
           <button
             onClick={() => setIsAdding(true)}
-            className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded-lg text-xs text-[var(--text-faint)] hover:text-[var(--text-muted)] hover:bg-[var(--surface-2)] transition-colors"
+            className="btn-shimmer flex items-center gap-1.5 w-full px-2 py-1.5 rounded-lg text-xs text-[var(--text-faint)] hover:text-[var(--text-muted)] border border-transparent transition-colors"
           >
-            <span>+</span> Ajouter une tâche
+            <span style={{ color: accent }}>+</span> Ajouter une tâche
           </button>
         )}
       </div>

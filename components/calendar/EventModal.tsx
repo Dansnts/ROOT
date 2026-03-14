@@ -45,6 +45,9 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
   const [summary,     setSummary]     = useState(event?.title       ?? "");
   const [dtstart,     setDtstart]     = useState(event?.start       ?? initialDate ?? "");
   const [dtend,       setDtend]       = useState(event?.end         ?? "");
+  const [allDay,      setAllDay]      = useState(!event?.startTime);
+  const [startTime,   setStartTime]   = useState(event?.startTime   ?? "09:00");
+  const [endTime,     setEndTime]     = useState(event?.endTime     ?? "10:00");
   const [description, setDescription] = useState(event?.description ?? "");
   const [location,    setLocation]    = useState(event?.location    ?? "");
   const [categoryId,  setCategoryId]  = useState<string>(defaultCategoryId);
@@ -64,6 +67,8 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
         summary: summary.trim(),
         dtstart,
         dtend: dtend || undefined,
+        startTime: allDay ? undefined : startTime || undefined,
+        endTime: allDay ? undefined : endTime || undefined,
         description: description || undefined,
         location: location || undefined,
       };
@@ -102,14 +107,22 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
     });
   }
 
+  // Quand on passe de "avec heure" à "journée entière", effacer l'heure de fin si elle dépasse minuit
+  function handleAllDayToggle(checked: boolean) {
+    setAllDay(checked);
+    if (!checked && !startTime) setStartTime("09:00");
+    if (!checked && !endTime)   setEndTime("10:00");
+  }
+
   return (
     <Drawer open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
       <DrawerContent>
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] shrink-0">
+          <div className="view-header flex items-center justify-between px-6 py-4 border-b border-[var(--border)] shrink-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-widest">
+              <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-[0.14em] font-mono flex items-center gap-2">
+                <span className="text-[var(--accent)]">▸</span>
                 {isEdit ? "Modifier l'événement" : "Nouvel événement"}
               </h3>
               {event?.synced && (
@@ -158,6 +171,28 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
               className={inputCls}
             />
 
+            {/* Journée entière toggle */}
+            <div className="flex items-center justify-between">
+              <label className={labelCls}>Journée entière</label>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={allDay}
+                onClick={() => handleAllDayToggle(!allDay)}
+                className={`relative w-9 h-5 rounded-full border transition-all duration-200 ${
+                  allDay
+                    ? "bg-[var(--accent)] border-[var(--accent)]"
+                    : "bg-[var(--surface-3)] border-[var(--border)]"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${
+                    allDay ? "translate-x-4" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+
             {/* Date début */}
             <div className="flex flex-col gap-1.5">
               <label className={labelCls}>Date de début *</label>
@@ -184,6 +219,30 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
                 </div>
               )}
             </div>
+
+            {/* Heures début / fin — uniquement si pas journée entière */}
+            {!allDay && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelCls}>Heure de début</label>
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className={inputCls}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelCls}>Heure de fin</label>
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Date fin */}
             <div className="flex flex-col gap-1.5">
@@ -282,7 +341,7 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
             <button
               onClick={handleSave}
               disabled={saving || !summary.trim() || !dtstart}
-              className="px-4 py-2 rounded-lg text-sm bg-[var(--surface-3)] border border-[var(--border-light)] text-[var(--text)] hover:border-[var(--accent)] transition-colors disabled:opacity-40"
+              className="btn-cta px-4 py-2 rounded-lg text-sm border font-medium disabled:opacity-40"
             >
               {saving ? "Sauvegarde…" : isEdit ? "Enregistrer" : selectedEntry ? "Créer et synchroniser" : "Créer"}
             </button>
@@ -293,5 +352,5 @@ export default function EventModal({ initialDate, event, onClose }: Props) {
   );
 }
 
-const inputCls = "w-full bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text)] text-sm outline-none focus:border-[var(--accent-hover)] transition-colors";
-const labelCls = "text-xs text-[var(--text-faint)] uppercase tracking-wider";
+const inputCls = "input-glow w-full bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text)] text-sm outline-none transition-colors";
+const labelCls = "text-[10px] text-[var(--text-faint)] uppercase tracking-[0.12em] font-mono";

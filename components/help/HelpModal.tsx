@@ -215,34 +215,41 @@ export default function HelpModal({ onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center  pt-10 bg-black/60 backdrop-blur-sm"
+      className="modal-overlay-enter fixed inset-0 z-50 flex items-start justify-center pt-10 bg-black/60 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-[58rem] bg-[var(--surface-2)] border border-[var(--border-light)] rounded-2xl shadow-2xl flex flex-col overflow-hidden h-[82vh]">
+      <div className="modal-panel-enter w-full max-w-[58rem] bg-[var(--surface-2)] border border-[var(--border-light)] rounded-2xl shadow-2xl flex flex-col overflow-hidden h-[82vh]">
 
         {/* Header */}
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)] shrink-0">
-          <span className="text-sm font-semibold text-[var(--text)]">Aide</span>
-          <button onClick={onClose} className="ml-auto text-[var(--text-faint)] hover:text-[var(--text-muted)] flex items-center justify-center w-6 h-6"><XIcon /></button>
+        <div className="view-header flex items-center gap-3 px-6 py-4 border-b border-[var(--border)] shrink-0">
+          <span className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-[0.14em]">Aide</span>
+          <span className="text-[var(--text-faint)] font-mono text-[10px]">— GĒN</span>
+          <button onClick={onClose} className="btn-shimmer ml-auto text-[var(--text-faint)] hover:text-[var(--text)] flex items-center justify-center w-7 h-7 rounded-lg border border-transparent"><XIcon /></button>
         </div>
 
         {/* Body */}
         <div className="flex flex-1 overflow-hidden min-h-0">
 
-          {/* Left , categories */}
-          <div className="w-48 shrink-0 border-r border-[var(--border)] flex flex-col py-3 overflow-y-auto">
+          {/* Left — catégories (style différent de la sidebar : fond + icône colorée) */}
+          <div className="w-52 shrink-0 border-r border-[var(--border)] flex flex-col py-2 overflow-y-auto bg-[var(--surface)]">
             {SECTIONS.map((s) => (
               <button
                 key={s.id}
                 onClick={() => setActiveId(s.id)}
-                className={`flex items-center gap-2.5 px-4 py-2.5 text-sm text-left transition-colors ${
+                className={`flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-all ${
                   activeId === s.id
                     ? "bg-[var(--surface-3)] text-[var(--text)]"
-                    : "text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--text)]"
+                    : "text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
                 }`}
               >
-                <span className="shrink-0">{s.icon}</span>
+                <span className={`shrink-0 transition-colors ${activeId === s.id ? "text-[var(--accent)]" : ""}`}>
+                  {s.icon}
+                </span>
                 <span>{s.label}</span>
+                {activeId === s.id && (
+                  <span className="ml-auto w-1 h-1 rounded-full bg-[var(--accent)]"
+                    style={{ boxShadow: "0 0 4px var(--accent)" }} />
+                )}
               </button>
             ))}
           </div>
@@ -272,26 +279,30 @@ export default function HelpModal({ onClose }: Props) {
             </ul>
 
             {/* Gen speech bubble */}
-            <div className="mt-auto pt-4 flex items-start gap-4">
-              {/* Bubble */}
-              <div className="flex-1 relative bg-[var(--surface-3)] border border-[var(--border-light)] rounded-2xl px-4 py-3">
+            <div className="mt-auto pt-6 flex items-end gap-4">
+              {/* Bubble avec queue vers Gen à droite */}
+              <div className="flex-1 relative bg-[var(--surface-3)] border border-[var(--accent)]/15 rounded-2xl rounded-br-sm px-4 py-3"
+                style={{ boxShadow: "0 0 20px rgba(var(--accent-rgb) / 0.06)" }}>
                 <p className="text-sm text-[var(--text)] italic leading-relaxed">
                   {section.genSays}
                 </p>
+                {/* Queue de bulle */}
+                <div className="absolute -bottom-2 right-6 w-4 h-2 overflow-hidden">
+                  <div className="w-3 h-3 bg-[var(--surface-3)] border-r border-b border-[var(--accent)]/15 rotate-45 translate-y-[-6px] translate-x-1" />
+                </div>
               </div>
 
               {/* Gen */}
-              <div className="shrink-0 flex flex-col items-center gap-1 select-none">
+              <div className="shrink-0 flex flex-col items-center gap-0.5 select-none mb-1">
                 <Image
                   src={genSrc}
                   alt="Gēn"
-                  width={80}
-                  height={80}
-                  className="object-contain"
-                  style={{ imageRendering: "pixelated" }}
+                  width={72}
+                  height={72}
+                  className="object-contain pixel-art"
                   unoptimized
                 />
-                <span className="text-[10px] text-[var(--text-faint)] tracking-widest font-mono">GĒN</span>
+                <span className="text-[9px] text-[var(--accent)] tracking-[0.2em] font-mono opacity-70">GĒN</span>
               </div>
             </div>
 

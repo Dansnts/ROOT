@@ -94,15 +94,15 @@ export default function TrashView() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)] shrink-0">
-        <h2 className="text-sm font-semibold text-[var(--text)]">Corbeille</h2>
-        <span className="text-xs text-[var(--text-faint)]">
-          {total} élément{total !== 1 ? "s" : ""}
+      <div className="view-header flex items-center gap-3 px-6 py-4 border-b border-[var(--border)] shrink-0">
+        <h2 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-[0.14em] font-mono">Corbeille</h2>
+        <span className="text-xs text-[var(--text-faint)] font-mono">
+          {total > 0 ? `${total} élément${total !== 1 ? "s" : ""}` : "vide"}
         </span>
         {total > 0 && (
           <button
             onClick={handleEmptyTrash}
-            className="ml-auto text-xs px-3 py-1.5 rounded-lg bg-red-900/20 border border-red-700/30 text-red-400 hover:bg-red-900/40 transition-colors"
+            className="btn-shimmer ml-auto text-xs px-3 py-1.5 rounded-lg bg-red-900/20 border border-red-700/30 text-red-400"
           >
             Vider la corbeille
           </button>
@@ -116,9 +116,18 @@ export default function TrashView() {
         )}
 
         {!loading && total === 0 && (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-[var(--text-faint)]">
-            <TrashEmptyIcon />
-            <p className="text-sm">La corbeille est vide</p>
+          <div className="flex flex-col items-center justify-center h-full gap-4 select-none">
+            <div className="relative flex items-center justify-center">
+              <div className="empty-state-glow absolute" style={{
+                width: 80, height: 80, borderRadius: "50%",
+                background: "radial-gradient(circle, rgba(var(--text-faint-rgb, 216 236 225) / 0.08) 0%, transparent 70%)",
+              }} />
+              <TrashEmptyIcon />
+            </div>
+            <div className="text-center" style={{ opacity: 0.45 }}>
+              <p className="text-sm font-mono text-[var(--text-muted)]">corbeille vide</p>
+              <p className="text-xs text-[var(--text-faint)] mt-1">rien à effacer</p>
+            </div>
           </div>
         )}
 
@@ -178,9 +187,9 @@ function TrashItem({ icon, title, deletedAt, onRestore, onDelete }: {
   });
 
   return (
-    <div className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--surface-2)] transition-colors">
-      <span className="text-xs opacity-50 shrink-0">{icon}</span>
-      <span className="flex-1 text-sm text-[var(--text-muted)] truncate">{title}</span>
+    <div className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--surface-2)] transition-all" style={{ opacity: 0.72 }}>
+      <span className="text-xs opacity-40 shrink-0">{icon}</span>
+      <span className="flex-1 text-sm text-[var(--text-muted)] truncate line-through decoration-[var(--text-faint)] decoration-[0.5px]">{title}</span>
       <span className="text-xs text-[var(--text-faint)] shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
         {dateStr}
       </span>

@@ -27,12 +27,15 @@ export default function ChangelogDrawer({ onClose }: Props) {
         <div className="flex flex-col h-full">
 
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] shrink-0">
+          <div className="view-header flex items-center justify-between px-6 py-4 border-b border-[var(--border)] shrink-0">
             <div className="flex items-center gap-3">
-              <h3 className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-widest">
+              <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-[0.14em] font-mono">
                 Changelog
               </h3>
-              <span className="text-xs font-mono text-[var(--accent)] bg-[var(--surface-3)] px-2 py-0.5 rounded-full border border-[var(--border)]">
+              <span
+                className="text-xs font-mono text-[var(--accent)] bg-[var(--surface-3)] px-2.5 py-0.5 rounded-full border border-[var(--accent)]/25"
+                style={{ boxShadow: "0 0 8px rgba(var(--accent-rgb) / 0.2)" }}
+              >
                 v{APP_VERSION}
               </span>
             </div>

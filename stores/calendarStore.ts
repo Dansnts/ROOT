@@ -26,6 +26,8 @@ export interface StoreEvent {
   title: string;
   start: string;     // YYYY-MM-DD
   end?: string;
+  startTime?: string; // HH:MM — absent si journée entière
+  endTime?: string;   // HH:MM
   description?: string;
   location?: string;
   categoryId: string;
@@ -128,6 +130,8 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
           title,
           start: props.dueDate,
           end: props.endDate,
+          startTime: props.startTime,
+          endTime: props.endTime,
           description: props.description,
           location: props.location,
           categoryId,
@@ -215,6 +219,8 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
     const props: CalDAVBlockProps = {
       dueDate: data.dtstart,
       endDate: data.dtend,
+      startTime: data.startTime,
+      endTime: data.endTime,
       description: data.description,
       location: data.location,
       caldavEventId: uid,
@@ -254,7 +260,9 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
     const newProps: CalDAVBlockProps = {
       ...oldProps,
       dueDate: data.dtstart ?? oldProps.dueDate,
-      endDate: data.dtend ?? oldProps.endDate,
+      endDate: data.dtend !== undefined ? (data.dtend || undefined) : oldProps.endDate,
+      startTime: data.startTime !== undefined ? (data.startTime || undefined) : oldProps.startTime,
+      endTime: data.endTime !== undefined ? (data.endTime || undefined) : oldProps.endTime,
       description: data.description ?? oldProps.description,
       location: data.location ?? oldProps.location,
     };
@@ -266,6 +274,8 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
         summary: newTitle,
         dtstart: newProps.dueDate ?? data.dtstart ?? "",
         dtend: newProps.endDate,
+        startTime: newProps.startTime,
+        endTime: newProps.endTime,
         description: newProps.description,
         location: newProps.location,
         caldavUrl: oldProps.caldavUrl,

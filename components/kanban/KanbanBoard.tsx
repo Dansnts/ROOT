@@ -115,16 +115,22 @@ export default function KanbanBoard() {
     <div className="flex flex-col h-full overflow-hidden">
 
       {/* Header */}
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)] shrink-0">
-        <h2 className="text-lg font-semibold">Kanban</h2>
-        <button onClick={loadTasks} className="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
-          <RefreshIcon size={14} />
+      <div className="view-header flex items-center gap-3 px-6 py-4 border-b border-[var(--border)] shrink-0">
+        <h2 className="text-sm font-semibold text-[var(--text)] font-mono tracking-widest uppercase flex items-center gap-2">
+          <span className="text-[var(--accent)]">▸</span> kanban
+        </h2>
+        <button
+          onClick={loadTasks}
+          className="text-[var(--text-faint)] hover:text-[var(--accent)] transition-colors hover:rotate-180 duration-500"
+          title="Rafraîchir"
+        >
+          <RefreshIcon size={13} />
         </button>
         <button
           onClick={() => setShowCreate(true)}
-          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-[var(--surface-3)] border border-[var(--border-light)] text-[var(--text)] hover:border-[var(--accent)] transition-colors"
+          className="btn-cta ml-auto flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm border font-medium"
         >
-          <PlusIcon size={13} className="text-[var(--accent)]" /> Nouvelle tâche
+          <PlusIcon size={13} /> Nouvelle tâche
         </button>
       </div>
 
@@ -137,10 +143,10 @@ export default function KanbanBoard() {
           <button
             key={s}
             onClick={() => setSort(s === sort ? "order" : s)}
-            className={`px-2.5 py-1 rounded-md text-xs transition-colors ${
+            className={`btn-shimmer px-2.5 py-1 rounded-md text-xs border transition-colors ${
               sort === s
-                ? "bg-[var(--surface-3)] text-[var(--text)] border border-[var(--border-light)]"
-                : "text-[var(--text-faint)] hover:text-[var(--text-muted)]"
+                ? "bg-[var(--surface-3)] text-[var(--accent)] border-[var(--accent)]/30"
+                : "border-transparent text-[var(--text-faint)] hover:text-[var(--text-muted)]"
             }`}
           >
             {s === "order" ? "Manuel" : s === "date" ? "Date ↑" : "Priorité ↓"}

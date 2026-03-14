@@ -69,6 +69,14 @@ body {
   image-rendering: crisp-edges;
 }
 
+/* ── Native time input — dark-mode theming ───────────────────────────────── */
+input[type="time"] {
+  color-scheme: dark;
+}
+[data-theme="light"] input[type="time"] {
+  color-scheme: light;
+}
+
 /* ── Scrollbar ────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -344,6 +352,9 @@ body {
 .root-calendar .fc-col-header-cell-cushion { color: var(--text-muted); font-weight: 500; }
 .root-calendar .fc-daygrid-day-number { color: var(--text-muted); font-size: 0.8rem; }
 .root-calendar .fc-daygrid-day.fc-day-today .fc-daygrid-day-number { color: var(--accent); font-weight: 700; }
+.root-calendar .fc-daygrid-day.fc-day-today {
+  box-shadow: inset 0 -2px 0 rgba(248, 113, 113, 0.5);
+}
 .root-calendar .fc-event { border-radius: 3px; font-size: 0.8rem; cursor: pointer; }
 .root-calendar .fc-event:hover { filter: brightness(1.15); }
 .root-calendar .fc-button { text-transform: capitalize; font-size: 0.8rem !important; padding: 0.3rem 0.7rem !important; border-radius: 6px !important; }
@@ -362,4 +373,287 @@ body {
 }
 [vaul-drawer][vaul-drawer-direction="right"][data-state="open"] {
   transform: translateX(0);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ROOT — Enhanced UI Animations & Effects
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Keyframes ────────────────────────────────────────────────────────────── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.42; transform: translate(-50%, -50%) scale(1); }
+  50%       { opacity: 0.78; transform: translate(-50%, -50%) scale(1.12); }
+}
+
+@keyframes breathe-ring {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50%       { opacity: 0.35; transform: scale(1.06); }
+}
+
+@keyframes scan-line {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(800%); opacity: 0; }
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ── VaultGate — atmospheric background ──────────────────────────────────── */
+.vault-glow {
+  position: absolute;
+  width: 900px; height: 900px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(var(--accent-rgb) / 0.1)  0%,
+    rgba(var(--accent-rgb) / 0.04) 40%,
+    transparent 68%
+  );
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  animation: breathe 7s ease-in-out infinite;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.vault-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(var(--accent-rgb) / 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--accent-rgb) / 0.055) 1px, transparent 1px);
+  background-size: 44px 44px;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse 62% 62% at 50% 50%, black 0%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 62% 62% at 50% 50%, black 0%, transparent 100%);
+}
+
+.vault-scan {
+  position: absolute; inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.vault-scan::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(var(--accent-rgb) / 0.4) 50%, transparent 100%);
+  animation: scan-line 10s linear infinite;
+  animation-delay: 2s;
+}
+
+/* ── VaultGate — card & form ──────────────────────────────────────────────── */
+.vault-card {
+  animation: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.vault-input {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.vault-input:focus {
+  outline: none;
+  border-color: var(--accent) !important;
+  background: rgba(var(--accent-rgb) / 0.03) !important;
+  box-shadow:
+    0 0 0 3px rgba(var(--accent-rgb) / 0.12),
+    0 0 16px rgba(var(--accent-rgb) / 0.06),
+    inset 0 1px 0 rgba(var(--accent-rgb) / 0.06);
+}
+
+.vault-btn {
+  position: relative; overflow: hidden;
+  transition: border-color 0.22s ease, box-shadow 0.22s ease, color 0.22s ease, transform 0.12s ease;
+}
+.vault-btn::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(var(--accent-rgb) / 0.12) 0%, rgba(var(--accent-rgb) / 0.03) 60%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+.vault-btn:not(:disabled):hover {
+  border-color: rgba(var(--accent-rgb) / 0.6);
+  color: var(--accent);
+  box-shadow:
+    0 0 0 1px rgba(var(--accent-rgb) / 0.2),
+    0 0 32px rgba(var(--accent-rgb) / 0.1),
+    inset 0 1px 0 rgba(var(--accent-rgb) / 0.08);
+}
+.vault-btn:not(:disabled):hover::before { opacity: 1; }
+.vault-btn:not(:disabled):active { transform: translateY(1px); box-shadow: none; }
+
+/* ── Sidebar — nav item active glow ──────────────────────────────────────── */
+.nav-item-active-glow {
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb) / 0.06);
+  background: linear-gradient(
+    90deg,
+    rgba(var(--accent-rgb) / 0.08) 0%,
+    var(--surface-3) 40%
+  );
+}
+
+/* ── App — empty state ────────────────────────────────────────────────────── */
+@keyframes empty-breathe {
+  0%, 100% { opacity: 0.18; transform: scale(1); }
+  50%       { opacity: 0.32; transform: scale(1.04); }
+}
+
+.empty-state-glow {
+  animation: empty-breathe 4s ease-in-out infinite;
+}
+
+/* ── Input focus glow — réutilisable partout ──────────────────────────────── */
+.input-glow {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.input-glow:focus {
+  outline: none;
+  border-color: var(--accent) !important;
+  background: rgba(var(--accent-rgb) / 0.025) !important;
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb) / 0.1), 0 0 12px rgba(var(--accent-rgb) / 0.04);
+}
+
+/* ── Modal — entrées animées ──────────────────────────────────────────────── */
+.modal-overlay-enter {
+  animation: fade-in 0.18s ease both;
+}
+.modal-panel-enter {
+  animation: fade-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Task card hover ──────────────────────────────────────────────────────── */
+.task-card {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+}
+.task-card:hover {
+  border-color: var(--border-light);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(var(--accent-rgb) / 0.06);
+  transform: translateY(-1px);
+}
+.task-card:active { transform: translateY(0); }
+
+/* ── Kanban column drop zone active ───────────────────────────────────────── */
+.kanban-drop-active {
+  border: 1px dashed rgba(var(--accent-rgb) / 0.35) !important;
+  background: rgba(var(--accent-rgb) / 0.03) !important;
+}
+
+/* ── Shimmer button ────────────────────────────────────────────────────────── */
+@keyframes btn-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* Bouton principal avec shimmer au hover */
+.btn-shimmer {
+  position: relative; overflow: hidden;
+  transition: border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-shimmer::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(var(--accent-rgb) / 0.18) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  opacity: 0;
+  pointer-events: none;
+}
+.btn-shimmer:hover:not(:disabled) {
+  border-color: rgba(var(--accent-rgb) / 0.45);
+  color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb) / 0.12), 0 0 20px rgba(var(--accent-rgb) / 0.08);
+}
+.btn-shimmer:hover:not(:disabled)::after {
+  opacity: 1;
+  animation: btn-shimmer 0.7s ease;
+}
+.btn-shimmer:active:not(:disabled) { transform: scale(0.98); }
+
+/* Bouton CTA pulsant (utilisé pour les actions primaires importantes) */
+@keyframes cta-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb) / 0.3); }
+  50%       { box-shadow: 0 0 0 6px rgba(var(--accent-rgb) / 0); }
+}
+.btn-cta {
+  position: relative; overflow: hidden;
+  background: linear-gradient(135deg, rgba(var(--accent-rgb) / 0.15) 0%, rgba(var(--accent-rgb) / 0.06) 100%);
+  border-color: rgba(var(--accent-rgb) / 0.35) !important;
+  color: var(--accent) !important;
+  transition: all 0.2s ease;
+}
+.btn-cta:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(var(--accent-rgb) / 0.22) 0%, rgba(var(--accent-rgb) / 0.1) 100%);
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb) / 0.3), 0 0 24px rgba(var(--accent-rgb) / 0.14);
+  border-color: var(--accent) !important;
+}
+.btn-cta:active:not(:disabled) { transform: scale(0.97); }
+
+/* App buttons — systèmes de hover cohérents */
+.btn-app {
+  transition: border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+.btn-app:hover:not(:disabled) {
+  border-color: rgba(var(--accent-rgb) / 0.4);
+  color: var(--text);
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb) / 0.1);
+}
+.btn-accent {
+  transition: box-shadow 0.18s ease, opacity 0.15s ease;
+}
+.btn-accent:hover:not(:disabled) {
+  box-shadow: 0 0 14px rgba(var(--accent-rgb) / 0.28), 0 0 0 1px rgba(var(--accent-rgb) / 0.35);
+  opacity: 0.92;
+}
+
+/* ── View headers — fond subtil ───────────────────────────────────────────── */
+.view-header {
+  background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface) 100%);
+}
+
+/* ── Modal tabs — indicateur actif ───────────────────────────────────────── */
+.tab-active {
+  position: relative;
+}
+.tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 10%;
+  width: 80%;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px 2px 0 0;
+  box-shadow: 0 0 6px rgba(var(--accent-rgb) / 0.5);
+}
+
+/* ── Sidebar-style left border indicator (réutilisable) ───────────────────── */
+.left-indicator {
+  position: relative;
+}
+.left-indicator::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 25%; height: 50%;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 0 3px 3px 0;
+  box-shadow: 0 0 8px rgba(var(--accent-rgb) / 0.55);
 }

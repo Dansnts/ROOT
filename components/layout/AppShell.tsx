@@ -56,7 +56,7 @@ export default function AppShell() {
       >
         <Sidebar
           view={view}
-          onViewChange={(v) => { setView(v); if (v !== "calendar") setActiveCategoryId(null); }}
+          onViewChange={(v) => { setView(v); setActiveCategoryId(null); }}
           activeCategoryId={activeCategoryId}
           onCategorySelect={setActiveCategoryId}
         />
@@ -75,8 +75,30 @@ export default function AppShell() {
         {view === "notes" && (
           <div className="flex-1 overflow-y-auto">
             {!activePage && (
-              <div className="flex items-center justify-center h-full text-[var(--text-faint)] text-sm">
-                Sélectionnez ou créez une page dans la sidebar
+              <div className="flex flex-col items-center justify-center h-full gap-6 select-none">
+                {/* Logo avec halo respirant */}
+                <div className="relative flex items-center justify-center">
+                  <div
+                    className="empty-state-glow absolute"
+                    style={{
+                      width: 120, height: 120,
+                      borderRadius: "50%",
+                      background: "radial-gradient(circle, rgba(var(--accent-rgb) / 0.12) 0%, transparent 70%)",
+                    }}
+                  />
+                  <svg width="52" height="52" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ opacity: 0.22 }}>
+                    <path d="M12 3 L12 21" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M12 8 Q8 6 6 9" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+                    <path d="M12 12 Q17 10 19 13" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+                    <path d="M12 16 Q8 14 7 17" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+                  </svg>
+                </div>
+                <div className="text-center" style={{ opacity: 0.38 }}>
+                  <p className="text-sm font-medium text-[var(--text)] font-mono tracking-wide">ROOT</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1.5 leading-relaxed">
+                    Sélectionnez une page ou créez-en une nouvelle
+                  </p>
+                </div>
               </div>
             )}
 

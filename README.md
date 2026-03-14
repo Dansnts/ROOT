@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-1.2.4-blue?style=flat-square"/>
+  <img alt="Version" src="https://img.shields.io/badge/version-1.3.0-blue?style=flat-square"/>
   <img alt="Next.js" src="https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=nextdotjs"/>
   <img alt="AES-GCM 256" src="https://img.shields.io/badge/AES--GCM-256--bit-22d472?style=flat-square"/>
   <img alt="PBKDF2" src="https://img.shields.io/badge/PBKDF2-600k_iter-22d472?style=flat-square"/>
@@ -68,7 +68,7 @@ Calendar + CalDAV
 
 FullCalendar view with two-way sync to any CalDAV server (Infomaniak, Fastmail, iCloud, Nextcloud…). Credentials are encrypted at rest. Sync runs through a local nginx reverse proxy that handles CORS — no data transits a third-party.
 
-Each calendar can be mapped to either the calendar view or the Kanban board. Category visibility can be toggled live directly from the calendar header.
+Each calendar can be mapped to either the calendar view or the Kanban board. Category visibility can be toggled live directly from the calendar header. Events support start and end times — all-day or timed, with full CalDAV iCal compatibility. From a category detail view, clicking any event opens the shared edit modal; categories can be cleared (with CalDAV warning) or deleted locally.
 
 <img src="docs/images/CreateEvent.png" alt=""/>
 
@@ -183,6 +183,7 @@ All reads and writes go through `VaultService` (encrypt/decrypt) before touching
 
 | Version | Date | Changes |
 |---|---|---|
+| **v1.3.0** | 2026-03-14 | Full UI redesign — bioluminescent terminal aesthetic (animations, halos, breathing glows, styled empty states across all views). Calendar: start/end time support (all-day toggle, HH:MM pickers, DTSTART datetime in iCal, timeGrid display). Category view: click event opens shared EventModal; "Vider la catégorie" with CalDAV warning; "Supprimer la catégorie" (local only). Nav fix: clicking Calendar from a category always returns to calendar. |
 | **v1.2.4** | 2026-03-13 | Editor at 90% width, dynamically centered (ResizeObserver). Floating hub appears on hover with pop animation. Right-click context menu with slash-command options + table actions. Native browser context menu suppressed app-wide. Backup export/import: choose content (Pages / Settings) and import mode (Overwrite or Merge). |
 | **v1.2.3** | 2026-03-11 | Calendar category visibility toggles. Custom "+X more" popover. Sidebar DnD: drop to root zone. |
 | **v1.2.2** | 2026-03-11 | Replaced image logo with text wordmark. Removed Changelog tab from Settings. |

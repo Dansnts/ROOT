@@ -72,10 +72,10 @@ export default function TaskCard({ task }: { task: KanbanTask }) {
       ref={setNodeRef}
       style={{
         ...style,
-        borderLeftColor: accentColor ?? undefined,
-        borderLeftWidth: accentColor ? 3 : undefined,
+        borderLeftColor: accentColor ?? "var(--border)",
+        borderLeftWidth: 3,
       }}
-      className="group bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-3 cursor-grab active:cursor-grabbing hover:border-[var(--border-light)] transition-colors"
+      className="task-card group bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-3 cursor-grab active:cursor-grabbing"
       {...attributes}
       {...listeners}
     >

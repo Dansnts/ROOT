@@ -9,7 +9,7 @@
  *   4. `git tag v<version>` puis `git push origin v<version>`
  */
 
-export const APP_VERSION = "1.2.4";
+export const APP_VERSION = "1.3.0";
 
 export type ReleaseType = "feat" | "fix" | "perf" | "chore";
 
@@ -25,6 +25,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.3.0",
+    date: "2026-03-14",
+    changes: [
+      { type: "feat", text: "Refonte visuelle complète — esthétique 'bioluminescent terminal' : animations fade-up/breathe, halos verts, grilles de fond, états vides respirants sur toutes les vues." },
+      { type: "feat", text: "Calendrier : support des heures de début et fin (toggle journée entière, pickers HH:MM, DTSTART/DTEND avec composante horaire dans iCal, affichage dans la vue timeGrid et dans les listes)." },
+      { type: "feat", text: "Vue catégorie : clic sur un événement ouvre le même EventModal que le calendrier (composant partagé, zéro duplication)." },
+      { type: "feat", text: "Vue catégorie : 'Vider la catégorie' avec avertissement CalDAV, 'Supprimer la catégorie' (local uniquement)." },
+      { type: "fix", text: "Navigation : cliquer sur 'Calendrier' depuis une vue catégorie revient désormais bien à la vue calendrier." },
+    ],
+  },
   {
     version: "1.2.4",
     date: "2026-03-13",

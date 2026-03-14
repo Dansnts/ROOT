@@ -125,14 +125,23 @@ export default function VaultGate() {
     {showOnboarding && (
       <OnboardingModal onDone={() => { setShowOnboarding(false); setTimeout(() => inputRef.current?.focus(), 50); }} />
     )}
-    <div className="flex items-center justify-center min-h-screen bg-[var(--bg)]">
-      <div className="w-full max-w-sm px-4">
 
-        {/* Greeting — visible sur l'écran de déverrouillage si prénom connu */}
+    {/* ── Atmospheric background ── */}
+    <div className="relative flex items-center justify-center min-h-screen bg-[var(--bg)] overflow-hidden">
+      <div className="vault-glow" />
+      <div className="vault-grid" />
+      <div className="vault-scan" />
+
+      {/* ── Card ── */}
+      <div className="vault-card relative z-10 w-full max-w-[360px] px-6">
+
+        {/* Greeting / Logo */}
         {showGreeting ? (
           <div className="text-center mb-10">
-            <div className="mb-3 text-[var(--text-faint)] flex justify-center"><greeting.Icon size={40} /></div>
-            <h1 className="text-2xl font-bold text-[var(--text)]">
+            <div className="mb-4 flex justify-center text-[var(--text-faint)]">
+              <greeting.Icon size={42} />
+            </div>
+            <h1 className="text-[1.6rem] font-bold text-[var(--text)] leading-tight">
               {greeting.text},{" "}
               <span className="text-[var(--accent)]">{storedName}</span>
             </h1>
@@ -142,20 +151,44 @@ export default function VaultGate() {
           </div>
         ) : (
           <div className="text-center mb-10">
-            <h1 className="text-2xl font-bold text-[var(--accent)] tracking-tight">ROOT</h1>
-            <p className="text-sm text-[var(--text-muted)] mt-2">
+            {/* Logo avec halo bioluminescent */}
+            <div className="flex justify-center mb-5">
+              <div className="relative">
+                {/* Halo externe */}
+                <div style={{
+                  position: "absolute",
+                  inset: -20,
+                  borderRadius: "50%",
+                  background: "radial-gradient(circle, rgba(var(--accent-rgb) / 0.18) 0%, transparent 70%)",
+                  animation: "breathe-ring 4s ease-in-out infinite",
+                }} />
+                {/* Halo proche */}
+                <div style={{
+                  position: "absolute",
+                  inset: -8,
+                  borderRadius: "50%",
+                  background: "rgba(var(--accent-rgb) / 0.08)",
+                  filter: "blur(8px)",
+                }} />
+                <VaultLogoIcon size={58} />
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold tracking-[0.22em] text-[var(--accent)] font-mono">
+              ROOT
+            </h1>
+            <p className="text-[13px] text-[var(--text-muted)] mt-2.5 tracking-wide">
               {mode === "init" ? "Créez votre espace sécurisé" : "Déverrouillez votre espace"}
             </p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
-          {/* Prénom — uniquement à l'initialisation */}
           {mode === "init" && (
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-[var(--text-muted)] font-medium uppercase tracking-widest">
-                Votre prénom <span className="text-[var(--text-faint)] normal-case">(optionnel)</span>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] text-[var(--text-muted)] font-medium uppercase tracking-[0.14em]">
+                Votre prénom <span className="text-[var(--text-faint)] normal-case opacity-60">(optionnel)</span>
               </label>
               <input
                 type="text"
@@ -164,13 +197,13 @@ export default function VaultGate() {
                 disabled={isLoading}
                 autoComplete="given-name"
                 placeholder="Ex : Alice"
-                className="w-full px-4 py-2.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)] transition-colors disabled:opacity-40"
+                className="vault-input w-full px-4 py-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] text-sm placeholder:text-[var(--text-faint)] disabled:opacity-40"
               />
             </div>
           )}
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-[var(--text-muted)] font-medium uppercase tracking-widest">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] text-[var(--text-muted)] font-medium uppercase tracking-[0.14em]">
               Master Password
             </label>
             <input
@@ -180,14 +213,14 @@ export default function VaultGate() {
               onChange={(e) => setPassword(e.target.value)}
               disabled={isLoading}
               autoComplete={mode === "init" ? "new-password" : "current-password"}
-              className="w-full px-4 py-2.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)] transition-colors disabled:opacity-40 font-mono tracking-wider"
+              className="vault-input w-full px-4 py-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] text-sm placeholder:text-[var(--text-faint)] disabled:opacity-40 font-mono tracking-widest"
               placeholder="••••••••••••"
             />
           </div>
 
           {mode === "init" && (
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-[var(--text-muted)] font-medium uppercase tracking-widest">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] text-[var(--text-muted)] font-medium uppercase tracking-[0.14em]">
                 Confirmer
               </label>
               <input
@@ -196,40 +229,61 @@ export default function VaultGate() {
                 onChange={(e) => setConfirm(e.target.value)}
                 disabled={isLoading}
                 autoComplete="new-password"
-                className="w-full px-4 py-2.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)] transition-colors disabled:opacity-40 font-mono tracking-wider"
+                className="vault-input w-full px-4 py-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] text-sm placeholder:text-[var(--text-faint)] disabled:opacity-40 font-mono tracking-widest"
                 placeholder="••••••••••••"
               />
             </div>
           )}
 
           {error && (
-            <p className="text-sm text-[var(--danger)] text-center">{error}</p>
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[var(--danger)]/8 border border-[var(--danger)]/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--danger)] shrink-0" />
+              <p className="text-sm text-[var(--danger)]">{error}</p>
+            </div>
           )}
 
           <button
             type="submit"
             disabled={isLoading || !password}
-            className="mt-1 w-full py-2.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border-light)] text-[var(--text)] font-medium text-sm hover:bg-[var(--surface-3)] hover:border-[var(--accent)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="vault-btn mt-1 w-full py-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border-light)] text-[var(--text)] font-medium text-sm disabled:opacity-35 disabled:cursor-not-allowed font-mono tracking-wide"
           >
             {mode === "loading" ? (
-              <span className="flex items-center justify-center gap-2">
+              <span className="flex items-center justify-center gap-2.5">
                 <Spinner />
                 {status === "uninitialized" ? "Initialisation…" : "Déverrouillage…"}
               </span>
             ) : mode === "init" ? (
-              "Créer le vault"
+              "Créer le vault →"
             ) : (
-              "Déverrouiller"
+              "Déverrouiller →"
             )}
           </button>
         </form>
 
-        <p className="text-center text-xs text-[var(--text-faint)] mt-8 leading-relaxed font-mono">
-          Zero-Knowledge · AES-GCM 256 · PBKDF2 600k
-        </p>
+        {/* Zero-knowledge badge */}
+        <div className="mt-9 flex items-center gap-3">
+          <div className="flex-1 h-px bg-[var(--border)]" />
+          <p className="text-[10px] text-[var(--text-faint)] font-mono whitespace-nowrap tracking-wider">
+            zero-knowledge · aes-gcm-256 · pbkdf2-600k
+          </p>
+          <div className="flex-1 h-px bg-[var(--border)]" />
+        </div>
+
       </div>
     </div>
     </>
+  );
+}
+
+// ── Logo SVG pour VaultGate (version grande avec accent) ──────────────────────
+function VaultLogoIcon({ size = 48 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 3 L12 21" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" />
+      <path d="M12 8 Q8 6 6 9"  stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+      <path d="M12 12 Q17 10 19 13" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+      <path d="M12 16 Q8 14 7 17" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+    </svg>
   );
 }
 

@@ -170,8 +170,18 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
 
       {/* Header — Logo + nom */}
       <div className="flex items-center gap-2.5 px-4 py-4 border-b border-[var(--border)]">
-        <LogoIcon size={26} />
-        <span className="font-bold text-base tracking-widest text-[var(--accent)] font-mono">ROOT</span>
+        {/* Logo avec halo subtil */}
+        <div className="relative flex items-center justify-center">
+          <div style={{
+            position: "absolute",
+            width: 36, height: 36,
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(var(--accent-rgb) / 0.14) 0%, transparent 70%)",
+            filter: "blur(4px)",
+          }} />
+          <LogoIcon size={26} />
+        </div>
+        <span className="font-bold text-base tracking-[0.2em] text-[var(--accent)] font-mono">ROOT</span>
 
         {/* Avatar — menu utilisateur */}
         <div className="ml-auto relative">
@@ -255,16 +265,24 @@ export default function Sidebar({ view, onViewChange, activeCategoryId, onCatego
           <React.Fragment key={id}>
             <button
               onClick={() => onViewChange(id)}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[15px] transition-colors w-full text-left ${
+              className={`relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-[15px] transition-colors w-full text-left overflow-hidden ${
                 view === id
-                  ? "bg-[var(--surface-3)] text-[var(--text)]"
+                  ? "nav-item-active-glow text-[var(--text)]"
                   : "text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
               }`}
             >
-              <Icon size={20} />
+              {/* Indicateur bordure gauche accent */}
+              {view === id && (
+                <span
+                  className="absolute left-0 top-2 bottom-2 rounded-r-full"
+                  style={{ width: 3, background: "var(--accent)", boxShadow: "0 0 8px rgba(var(--accent-rgb) / 0.6)" }}
+                />
+              )}
+              <Icon size={18} />
               {label}
               {view === id && id !== "calendar" && (
-                <span className="ml-auto w-1 h-1 rounded-full bg-[var(--accent)]" />
+                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--accent)]"
+                  style={{ boxShadow: "0 0 6px rgba(var(--accent-rgb) / 0.7)" }} />
               )}
               {id === "calendar" && view === "calendar" && (
                 <span className="ml-auto text-[var(--text-faint)] flex items-center"><ChevronDownIcon size={11} /></span>

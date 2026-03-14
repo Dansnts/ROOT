@@ -181,17 +181,32 @@ export default function TagsView() {
       {/* Panneau droit — détail du tag sélectionné */}
       <div className="flex-1 overflow-y-auto p-6">
         {!selectedTag ? (
-          <div className="flex items-center justify-center h-full text-[var(--text-faint)] text-sm">
-            Sélectionnez un tag pour voir les éléments liés
+          <div className="flex flex-col items-center justify-center h-full gap-3 select-none" style={{ opacity: 0.4 }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--text-faint)]">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+              <line x1="7" y1="7" x2="7.01" y2="7"/>
+            </svg>
+            <p className="text-xs text-[var(--text-faint)] font-mono">← sélectionne un tag</p>
           </div>
         ) : (
           <div className="max-w-2xl flex flex-col gap-8">
 
-            {/* Header tag */}
-            <div className="flex items-center gap-3">
-              <span className="w-4 h-4 rounded-full" style={{ backgroundColor: selectedTag.color }} />
+            {/* Header tag — utilise la couleur du tag comme accent local */}
+            <div className="flex items-center gap-3 pb-4"
+              style={{ borderBottom: `1px solid ${selectedTag.color}28` }}>
+              <div className="relative">
+                <div style={{
+                  position: "absolute", inset: -6, borderRadius: "50%",
+                  background: `radial-gradient(circle, ${selectedTag.color}22 0%, transparent 70%)`,
+                }} />
+                <span className="w-5 h-5 rounded-full block"
+                  style={{ backgroundColor: selectedTag.color, boxShadow: `0 0 10px ${selectedTag.color}60` }} />
+              </div>
               <h3 className="text-xl font-bold text-[var(--text)]">{selectedTag.name}</h3>
-              <span className="text-sm text-[var(--text-faint)]">
+              <span
+                className="text-xs px-2 py-0.5 rounded-full font-mono ml-1"
+                style={{ color: selectedTag.color, background: `${selectedTag.color}18`, border: `1px solid ${selectedTag.color}30` }}
+              >
                 {(usageMap.get(selectedTag.id) ?? 0)} élément{(usageMap.get(selectedTag.id) ?? 0) !== 1 ? "s" : ""}
               </span>
             </div>

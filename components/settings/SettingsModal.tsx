@@ -39,25 +39,25 @@ export default function SettingsModal({ onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-10 bg-black/20 backdrop-blur-[2px]"
+      className="modal-overlay-enter fixed inset-0 z-50 flex items-start justify-center pt-10 bg-black/25 backdrop-blur-[3px]"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-[54rem] bg-[var(--surface-2)] border border-[var(--border-light)] rounded-2xl shadow-2xl flex flex-col overflow-hidden h-[82vh]">
+      <div className="modal-panel-enter w-full max-w-[54rem] bg-[var(--surface-2)] border border-[var(--border-light)] rounded-2xl shadow-2xl flex flex-col overflow-hidden h-[82vh]">
         {/* Header */}
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)] shrink-0">
-          <h2 className="text-sm font-semibold text-[var(--text)]">Paramètres</h2>
-          <button onClick={onClose} className="ml-auto text-[var(--text-faint)] hover:text-[var(--text-muted)] flex items-center justify-center w-6 h-6"><XIcon /></button>
+        <div className="view-header flex items-center gap-3 px-6 py-4 border-b border-[var(--border)] shrink-0">
+          <h2 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-[0.14em]">Paramètres</h2>
+          <button onClick={onClose} className="btn-shimmer ml-auto text-[var(--text-faint)] hover:text-[var(--text)] flex items-center justify-center w-7 h-7 rounded-lg border border-transparent"><XIcon /></button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 px-6 pt-4 shrink-0">
+        {/* Tabs — underline indicator (style ≠ sidebar left border) */}
+        <div className="flex gap-0 px-6 pt-3 border-b border-[var(--border)] shrink-0">
           {(["profil", "caldav", "export", "données"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-4 py-1.5 rounded-lg text-sm transition-colors ${
+              className={`relative px-4 py-2 pb-3 text-sm transition-colors ${
                 tab === t
-                  ? "bg-[var(--surface-3)] text-[var(--text)]"
+                  ? "tab-active text-[var(--text)]"
                   : "text-[var(--text-muted)] hover:text-[var(--text)]"
               }`}
             >
@@ -1018,8 +1018,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 const inputCls =
-  "w-full bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text)] text-sm outline-none focus:border-[var(--accent-hover)] transition-colors";
+  "input-glow w-full bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text)] text-sm";
 
 const btnCls =
-  "px-4 py-2 rounded-lg text-sm bg-[var(--surface-3)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--border-light)] transition-colors disabled:opacity-40";
+  "btn-shimmer px-4 py-2 rounded-lg text-sm bg-[var(--surface-3)] border border-[var(--border)] text-[var(--text-muted)] disabled:opacity-40";
 

@@ -5,6 +5,7 @@ import { useCalendarStore, type StoreEvent, UNCATEGORIZED_ID } from "@/stores/ca
 import { useCategoriesStore } from "@/stores/categoriesStore";
 import { ArrowLeftIcon, TrashIcon, ArrowRightIcon, ArrowsRightLeftIcon, XIcon } from "@/components/ui/icons";
 import { KANBAN_PAGE_ID } from "@/lib/constants";
+import EventModal from "./EventModal";
 
 interface Props {
   categoryId: string;
@@ -12,9 +13,11 @@ interface Props {
 }
 
 export default function CategoryDetailView({ categoryId, onBack }: Props) {
-  const { events, loadEvents, moveEventToCategory, deleteEvent, deleteEventLocal } = useCalendarStore();
-  const { categories } = useCategoriesStore();
+  const { events, loadEvents, moveEventToCategory, deleteEvent, deleteEventLocal, deleteCalendarEvents } = useCalendarStore();
+  const { categories, deleteCategory } = useCategoriesStore();
   const [reassignId, setReassignId] = useState<string | null>(null);
+  const [editingEvent, setEditingEvent] = useState<StoreEvent | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   useEffect(() => { loadEvents(); }, [loadEvents]);
 
@@ -70,36 +73,83 @@ export default function CategoryDetailView({ categoryId, onBack }: Props) {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)] shrink-0">
+      <div className="view-header flex items-center gap-3 px-6 py-4 border-b border-[var(--border)] shrink-0">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+          className="flex items-center gap-1.5 text-xs text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors font-mono"
         >
-          <ArrowLeftIcon size={14} /> Retour
+          <ArrowLeftIcon size={13} /> calendrier
         </button>
         <div className="w-px h-4 bg-[var(--border)]" />
         {category && (
           <div className="flex items-center gap-2 flex-1">
-            <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: category.color }} />
-            <h1 className="text-lg font-semibold text-[var(--text)]">{category.name}</h1>
+            <span
+              className="w-2.5 h-2.5 rounded-full shrink-0"
+              style={{ backgroundColor: category.color, boxShadow: `0 0 6px ${category.color}60` }}
+            />
+            <h1 className="text-sm font-semibold text-[var(--text)] font-mono tracking-wide">{category.name}</h1>
           </div>
         )}
 
-        {/* Bouton vider — suppression locale uniquement */}
-        {catEvents.length > 0 && (
-          <button
-            onClick={async () => {
-              if (!confirm(`Supprimer les ${catEvents.length} événements localement ?`)) return;
-              for (const ev of catEvents) {
-                await deleteEventLocal(ev.id);
-              }
-            }}
-            className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg border border-[var(--border)] text-[var(--text-faint)] hover:text-[var(--danger)] hover:border-[var(--danger)] transition-colors shrink-0"
-          >
-            <TrashIcon size={14} /> Tout supprimer
-          </button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Vider la catégorie */}
+          {catEvents.length > 0 && !isUncategorized && !isKanban && (
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text-faint)] hover:text-[var(--danger)] hover:border-[var(--danger)]/60 transition-colors"
+            >
+              <TrashIcon size={13} /> Vider la catégorie
+            </button>
+          )}
+
+          {/* Supprimer la catégorie (local uniquement) */}
+          {!isUncategorized && !isKanban && (
+            <button
+              onClick={async () => {
+                if (!confirm(`Supprimer la catégorie "${category?.name}" de ROOT ?\n\nCela ne supprime pas les événements ni le calendrier sur le serveur CalDAV.`)) return;
+                await deleteCategory(categoryId);
+                onBack();
+              }}
+              className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text-faint)] hover:text-orange-400 hover:border-orange-400/60 transition-colors"
+              title="Supprime uniquement dans ROOT (pas sur CalDAV)"
+            >
+              Supprimer la catégorie
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Confirmation "Vider la catégorie" */}
+      {showClearConfirm && (
+        <div className="mx-6 mt-4 p-4 rounded-xl bg-red-950/30 border border-[var(--danger)]/30 flex flex-col gap-3 shrink-0">
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium text-[var(--danger)]">Vider la catégorie ?</p>
+            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+              Les {catEvents.length} événement{catEvents.length > 1 ? "s" : ""} seront supprimés localement.
+              {catEvents.some((e) => e.synced) && (
+                <> Les événements synchronisés seront également <strong>supprimés sur le serveur CalDAV</strong>.</>
+              )}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={async () => {
+                await deleteCalendarEvents(categoryId);
+                setShowClearConfirm(false);
+              }}
+              className="px-3 py-1.5 text-xs rounded-lg bg-[var(--danger)]/15 border border-[var(--danger)]/40 text-[var(--danger)] hover:bg-[var(--danger)]/25 transition-colors"
+            >
+              Oui, vider
+            </button>
+            <button
+              onClick={() => setShowClearConfirm(false)}
+              className="px-3 py-1.5 text-xs rounded-lg border border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] transition-colors"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 px-6 py-4 border-b border-[var(--border)] shrink-0">
@@ -131,7 +181,8 @@ export default function CategoryDetailView({ categoryId, onBack }: Props) {
                 return (
                   <div key={ev.id} className="relative">
                     <div
-                      className={`flex items-start gap-3 px-3 py-2 rounded-lg border transition-colors ${
+                      onClick={() => setEditingEvent(ev)}
+                      className={`flex items-start gap-3 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
                         isToday
                           ? "border-[var(--accent)] bg-[var(--surface-2)]"
                           : "border-transparent hover:bg-[var(--surface-2)]"
@@ -147,6 +198,11 @@ export default function CategoryDetailView({ categoryId, onBack }: Props) {
                         </p>
                         <p className="text-xs text-[var(--text-faint)]">
                           {dayLabel(ev.start)}
+                          {ev.startTime && (
+                            <span className="font-mono ml-1">
+                              {ev.startTime}{ev.endTime && ev.endTime !== ev.startTime ? ` → ${ev.endTime}` : ""}
+                            </span>
+                          )}
                           {ev.end && ev.end !== ev.start && <> <ArrowRightIcon size={12} /> {dayLabel(ev.end)}</>}
                           {ev.location && ` · ${ev.location}`}
                         </p>
@@ -156,7 +212,7 @@ export default function CategoryDetailView({ categoryId, onBack }: Props) {
                           Auj.
                         </span>
                       )}
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                         {/* Réassigner (Sans catégorie uniquement) */}
                         {isUncategorized && categories.length > 0 && (
                           <button
@@ -212,6 +268,14 @@ export default function CategoryDetailView({ categoryId, onBack }: Props) {
           </div>
         ))}
       </div>
+
+      {/* EventModal partagé — même composant que CalendarView */}
+      {editingEvent && (
+        <EventModal
+          event={editingEvent}
+          onClose={() => setEditingEvent(null)}
+        />
+      )}
     </div>
   );
 }
