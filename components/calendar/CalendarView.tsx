@@ -212,8 +212,14 @@ export default function CalendarView() {
             const tagDefs = evTags.map((id) => tagById.get(id)).filter(Boolean) as { id: string; name: string; color: string }[];
             const startTime: string | undefined = info.event.extendedProps.startTime;
             const endTime: string | undefined   = info.event.extendedProps.endTime;
+            // Pour les événements horodatés en vue mois, FullCalendar n'applique pas
+            // la couleur de fond (classe fc-daygrid-dot-event) — on l'applique ici.
+            const bgColor = startTime ? info.event.backgroundColor : undefined;
             return (
-              <div className="flex flex-col px-1 py-0.5 w-full overflow-hidden">
+              <div
+                className="flex flex-col px-1 py-0.5 w-full overflow-hidden"
+                style={bgColor ? { backgroundColor: bgColor, borderRadius: 3 } : {}}
+              >
                 <div className="flex items-center gap-1">
                   {!info.event.extendedProps.synced && caldav && (
                     <span className="text-[10px] opacity-50 shrink-0" title="Non synchronisé">●</span>
