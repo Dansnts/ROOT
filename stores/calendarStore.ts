@@ -328,11 +328,7 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
   // ── Supprimer N événements localement en un seul passage (pas de CalDAV) ─
   deleteEventsLocalBulk: async (blockIds) => {
     const now = Date.now();
-    await db.transaction("rw", db.blocks, async () => {
-      for (const id of blockIds) {
-        await db.blocks.update(id, { isDeleted: true, updatedAt: now });
-      }
-    });
+    await Promise.all(blockIds.map((id) => db.blocks.update(id, { isDeleted: true, updatedAt: now })));
     await get().loadEvents();
   },
 
