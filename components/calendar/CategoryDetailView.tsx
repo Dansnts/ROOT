@@ -13,7 +13,7 @@ interface Props {
 }
 
 export default function CategoryDetailView({ categoryId, onBack }: Props) {
-  const { events, loadEvents, moveEventToCategory, deleteEvent, deleteEventLocal, deleteCalendarEvents } = useCalendarStore();
+  const { events, loadEvents, moveEventToCategory, deleteEvent, deleteEventLocal, deleteCalendarEvents, deleteEventsLocalBulk } = useCalendarStore();
   const { categories, deleteCategory } = useCategoriesStore();
   const [reassignId, setReassignId] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<StoreEvent | null>(null);
@@ -102,6 +102,16 @@ export default function CategoryDetailView({ categoryId, onBack }: Props) {
             </button>
           )}
 
+          {/* Supprimer tout — Sans catégorie uniquement */}
+          {catEvents.length > 0 && isUncategorized && (
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text-faint)] hover:text-[var(--danger)] hover:border-[var(--danger)]/60 transition-colors"
+            >
+              <TrashIcon size={13} /> Supprimer tout
+            </button>
+          )}
+
           {/* Supprimer la catégorie (local uniquement) */}
           {!isUncategorized && !isKanban && (
             <button
@@ -125,16 +135,22 @@ export default function CategoryDetailView({ categoryId, onBack }: Props) {
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium text-[var(--danger)]">Vider la catégorie ?</p>
             <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-              Les {catEvents.length} événement{catEvents.length > 1 ? "s" : ""} seront supprimés localement.
-              {catEvents.some((e) => e.synced) && (
-                <> Les événements synchronisés seront également <strong>supprimés sur le serveur CalDAV</strong>.</>
-              )}
+              {isUncategorized
+                ? <>Les {catEvents.length} événement{catEvents.length > 1 ? "s" : ""} seront supprimés localement uniquement — aucune action sur CalDAV.</>
+                : <>Les {catEvents.length} événement{catEvents.length > 1 ? "s" : ""} seront supprimés localement.{catEvents.some((e) => e.synced) && <> Les événements synchronisés seront également <strong>supprimés sur le serveur CalDAV</strong>.</>}</>
+              }
             </p>
           </div>
           <div className="flex gap-2">
             <button
               onClick={async () => {
-                await deleteCalendarEvents(categoryId);
+                if (isUncategorized) {
+                  // Suppression locale uniquement — les blocs ont des pageId variés,
+                  // on passe par les IDs connus dans le store (pas de query par pageId)
+                  await deleteEventsLocalBulk(catEvents.map((e) => e.id));
+                } else {
+                  await deleteCalendarEvents(categoryId);
+                }
                 setShowClearConfirm(false);
               }}
               className="px-3 py-1.5 text-xs rounded-lg bg-[var(--danger)]/15 border border-[var(--danger)]/40 text-[var(--danger)] hover:bg-[var(--danger)]/25 transition-colors"

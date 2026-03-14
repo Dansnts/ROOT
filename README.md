@@ -137,18 +137,41 @@ New users go through an onboarding checklist explaining the constraints (no reco
 ## Run with Docker
 
 ```bash
-docker run -p 8080:80 ghcr.io/Dansnts/root:latest
+docker run -p 8443:443 ghcr.io/Dansnts/root:latest
 ```
 
-Then open `http://localhost:8080`. On first launch, create your vault with a Master Password. Nothing else is required.
+Then open `https://localhost:8443`. On first launch, create your vault with a Master Password. Nothing else is required.
+
+> **TLS is mandatory.** The Web Crypto API (`SubtleCrypto`) is only available in [Secure Contexts](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) — HTTPS or `localhost`. Without TLS the vault will refuse to unlock.
+
+### Certificates
+
+Place your certificate files in the `certs/` folder before building or mounting:
+
+```
+certs/
+  cert.pem   ← TLS certificate (or self-signed)
+  key.pem    ← private key
+```
+
+For local development you can generate a self-signed certificate:
+
+```bash
+mkdir certs
+openssl req -x509 -newkey rsa:4096 -keyout certs/key.pem -out certs/cert.pem \
+  -days 365 -nodes -subj "/CN=localhost"
+```
+
+For production, drop in your real certificate (Let's Encrypt, etc.) and rebuild.
 
 ### Build from source
 
 ```bash
 git clone <this-repo>
 cd ROOT/ROOT
+# Generate or copy your certs first (see above)
 docker build -t root .
-docker run -p 8080:80 root
+docker run -p 8443:443 root
 ```
 
 ---

@@ -53,6 +53,7 @@ interface CalendarState {
   updateEvent: (blockId: string, data: Partial<EventFormData>) => Promise<void>;
   deleteEvent: (blockId: string) => Promise<void>;
   deleteEventLocal: (blockId: string) => Promise<void>;
+  deleteEventsLocalBulk: (blockIds: string[]) => Promise<void>;
   deleteCalendarEvents: (categoryId: string) => Promise<void>;
   moveEventToCategory: (blockId: string, newCategoryId: string) => Promise<void>;
 }
@@ -321,6 +322,17 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
   // ── Supprimer un événement localement uniquement (sans push serveur) ─────
   deleteEventLocal: async (blockId) => {
     await db.blocks.update(blockId, { isDeleted: true, updatedAt: Date.now() });
+    await get().loadEvents();
+  },
+
+  // ── Supprimer N événements localement en un seul passage (pas de CalDAV) ─
+  deleteEventsLocalBulk: async (blockIds) => {
+    const now = Date.now();
+    await db.transaction("rw", db.blocks, async () => {
+      for (const id of blockIds) {
+        await db.blocks.update(id, { isDeleted: true, updatedAt: now });
+      }
+    });
     await get().loadEvents();
   },
 
