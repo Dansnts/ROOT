@@ -357,6 +357,14 @@ input[type="time"] {
 }
 .root-calendar .fc-event { border-radius: 3px; font-size: 0.8rem; cursor: pointer; }
 .root-calendar .fc-event:hover { filter: brightness(1.15); }
+/* Timed events in daygrid month view — force block style with category color */
+.root-calendar .fc-daygrid-dot-event {
+  background-color: var(--fc-event-bg-color) !important;
+  color: var(--fc-event-text-color, #fff) !important;
+  border-radius: 3px;
+  padding: 0 !important;
+}
+.root-calendar .fc-daygrid-event-dot { display: none !important; }
 .root-calendar .fc-button { text-transform: capitalize; font-size: 0.8rem !important; padding: 0.3rem 0.7rem !important; border-radius: 6px !important; }
 .root-calendar .fc-button-primary:not(:disabled):active,
 .root-calendar .fc-button-primary:not(:disabled).fc-button-active { box-shadow: none !important; }
