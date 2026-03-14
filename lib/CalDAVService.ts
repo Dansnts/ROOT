@@ -505,18 +505,20 @@ export async function syncCalDAV(
   const serverUids = new Set<string>();
   const calBase = entry.url.replace(/\/?$/, "/");
 
-  // Charge une fois tous les blocs de la page cible pour éviter N requêtes DB
-  const pageBlocks = await db.blocks
-    .where("pageId").equals(categoryId)
-    .filter((b: import("./database").BlockRecord) => !b.isDeleted)
+  // Charge TOUS les blocs calendrier (pas seulement la catégorie cible) pour
+  // détecter les blocs précédemment mal catégorisés et les corriger au passage.
+  const allCalBlocks = await db.blocks
+    .filter((b: import("./database").BlockRecord) =>
+      !b.isDeleted && (b.type === "calendar-event" || b.type === "task")
+    )
     .toArray();
 
   // Index uid→block pour lookup O(1) (uid = caldavEventId stocké dans les props)
-  const blockByUid = new Map<string, typeof pageBlocks[0]>();
-  for (const block of pageBlocks) {
+  const blockByUid = new Map<string, typeof allCalBlocks[0]>();
+  for (const block of allCalBlocks) {
     try {
       const props = await decryptValue<CalDAVBlockProps>(block.encryptedProperties);
-      if (props.caldavEventId && props.caldavUrl?.startsWith(calBase)) {
+      if (props.caldavEventId) {
         blockByUid.set(props.caldavEventId, block);
       }
     } catch { /* skip */ }
@@ -547,10 +549,15 @@ export async function syncCalDAV(
         const foundBlock = blockByUid.get(event.uid);
 
         if (foundBlock) {
-          // Mise à jour uniquement si l'etag a changé
           const currentProps = await decryptValue<CalDAVBlockProps>(foundBlock.encryptedProperties);
-          if (currentProps.caldavEtag !== event.etag) {
+          const wrongCategory = foundBlock.pageId !== categoryId;
+          const etagChanged   = currentProps.caldavEtag !== event.etag;
+
+          if (wrongCategory || etagChanged) {
+            // Correction du pageId si le bloc était dans la mauvaise catégorie
+            // (targetPageId legacy, sync initial sans catégorie, etc.)
             await db.blocks.update(foundBlock.id, {
+              ...(wrongCategory ? { pageId: categoryId } : {}),
               encryptedContent: await encryptValue(newContent),
               encryptedProperties: await encryptValue({ ...currentProps, ...newProps }),
               updatedAt: Date.now(),
