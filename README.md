@@ -137,7 +137,7 @@ New users go through an onboarding checklist explaining the constraints (no reco
 ## Run with Docker
 
 ```bash
-docker run -p 8443:443 ghcr.io/Dansnts/root:latest
+docker run -p 8443:80 ghcr.io/Dansnts/root:latest
 ```
 
 Then open `https://localhost:8443`. On first launch, create your vault with a Master Password. Nothing else is required.
